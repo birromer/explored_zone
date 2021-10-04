@@ -7,6 +7,7 @@
 #include "UTM.h"
 #include "vibes.h"
 #include <proj.h>
+#include <iostream>
 
 bool switchOn = false;
 bool autoOn = false;
@@ -36,15 +37,21 @@ void callbackHeading(const std_msgs::Float64& msg)
 
 void callbackFix(const sensor_msgs::NavSatFix& msg)
 {
-	if(autoOn and !switchOn and state != 2)
+
+		//ROS_WARN("autoOn: %d | switchOn: %d | state: %d", autoOn, switchOn, state);
+	//if(autoOn and !switchOn and state != 2)
+	
 	{
 		state = 1;
+
+		ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
 		float pos_y,pos_x;
 		LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
 		pos_x -= pos_x_init;
 		pos_y -= pos_y_init;
 		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1.);
 	}
+
 	if(state == 1 and switchOn)
 	{
 		state = 2;
@@ -102,30 +109,13 @@ int main(int argc, char **argv)
   //  proj_context_destroy (C); /* may be omitted in the single threaded case */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	ros::init(argc, argv, "Dist_node");
 
 	ros::NodeHandle n;
 
 	ros::Subscriber sub_pos = n.subscribe("/fix", 1000, callbackFix);
-	ros::Subscriber sub_cmd = n.subscribe("/cmd_vel", 1000, callbackCmd);
+	//ros::Subscriber sub_cmd = n.subscribe("/cmd_vel", 1000, callbackCmd);
+	ros::Subscriber sub_cmd = n.subscribe("/rc/cmd", 1000, callbackCmd);
 	ros::Subscriber sub_heading = n.subscribe("/heading", 1000, callbackHeading);
 	ros::Subscriber sub_rc_enabled = n.subscribe("/rc/enabled", 1000, callbackRcEnabled);
 
