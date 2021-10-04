@@ -1,0 +1,8 @@
+<launch>
+  <node type="fieldCtrl" name="field" pkg="remote_control" output="screen"/>
+  <node type="robotControlLink" name="robotControlLink" pkg="remote_control" output="screen">
+    	<param name="port" value="/home/robin/robot_control/virtual_serial_ports/port1" />
+    	<param name="baudrate" value="921600" />
+    	<param name="timeout" value="0.05" />
+  </node>
+</launch>

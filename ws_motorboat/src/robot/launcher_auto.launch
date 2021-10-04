@@ -1,0 +1,19 @@
+<launch>
+  <node type="arduino_link" name="arduino" pkg="hardware_link" />
+  <node type="gnss_inertial_link" name="gnss" pkg="hardware_link" />
+  <node type="headingCtrl" name="ctrl" pkg="control" output="screen">
+  	<param name="kp" value="1.2" />
+  	<param name="kd" value="0.1" />
+  	<param name="ki" value="0." />
+  </node>
+  
+  <node type="fieldCtrl" name="field" pkg="remote_control" output="screen"/>
+  <node type="robotControlLink" name="robotControlLink" pkg="remote_control" output="screen">
+    	<param name="port" value="/dev/TELEMETRY" />
+    	<param name="baudrate" value="115200" />
+  </node>
+  <node type="customMessage" name="customMessage" pkg="remote_control" output="screen">
+  	<param name="customTopic0" value="/using_mag" />
+  </node>
+  <node pkg="rosbag" type="record" name="rosbag_record_diag" args="record -o /home/motorboat/bags/bag -a"/>  
+</launch>
