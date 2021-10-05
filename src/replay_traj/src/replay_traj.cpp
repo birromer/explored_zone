@@ -28,49 +28,47 @@ double current_heading;
 
 void callbackRcEnabled(const std_msgs::Bool& msg)
 {
-	switchOn = msg.data;
+    switchOn = msg.data;
 }
 
 void callbackCmd(const geometry_msgs::Twist& msg)
 {
-	autoOn = true;
+    autoOn = true;
 }
 
 void callbackHeading(const std_msgs::Float64& msg)
 {
-	current_heading = msg.data;
+    current_heading = msg.data;
 }
 
 void callbackFix(const sensor_msgs::NavSatFix& msg)
 {
 
-		//ROS_WARN("autoOn: %d | switchOn: %d | state: %d", autoOn, switchOn, state);
-	//if(autoOn and !switchOn and state != 2)
-	
-	{
-		
-		state = 1;
+        //ROS_WARN("autoOn: %d | switchOn: %d | state: %d", autoOn, switchOn, state);
+    //if(autoOn and !switchOn and state != 2)
 
-		ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
-		float pos_y,pos_x;
-		LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
-		pos_x -= pos_x_init;
-		pos_y -= pos_y_init;
-		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1.);
+        state = 1;
 
-		Interval r(3.,4.);
-		double r_min = 3, r_max=4;
-		double th_min = -M_PI/10;
-		double th_max = M_PI/10.;
-  		Interval theta(-M_PI/10.,M_PI/10.);
-		
-  		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
-		vibes::drawPie((pos_x, pos_y), (r_min, r_max), (th_min, th_max), true, vibes::vibesParams("figure", "Trajectory"));
+        ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
+        float pos_y,pos_x;
+        LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
+        pos_x -= pos_x_init;
+        pos_y -= pos_y_init;
+        vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1.);
 
-	if(state == 1 and switchOn)
-	{
-		state = 2;
-	}
+        Interval r(3.,4.);
+        double r_min = 3, r_max=4;
+        double th_min = -M_PI/10;
+        double th_max = M_PI/10.;
+        Interval theta(-M_PI/10.,M_PI/10.);
+
+        //fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
+        vibes::drawPie((pos_x, pos_y), (r_min, r_max), (th_min, th_max), true, vibes::vibesParams("figure", "Trajectory"));
+
+    if(state == 1 and switchOn)
+    {
+        state = 2;
+    }
 
 
 }
@@ -81,9 +79,9 @@ int main(int argc, char **argv)
 
   vibes::beginDrawing();
   fig = new VIBesFig("Trajectory");
-  
+
 /*
-	PJ_CONTEXT *C;
+    PJ_CONTEXT *C;
     PJ *P;
     PJ* P_for_GIS;
     PJ_COORD a, b;
@@ -126,59 +124,59 @@ int main(int argc, char **argv)
   //  proj_context_destroy (C); /* may be omitted in the single threaded case */
 
 
-	ros::init(argc, argv, "Dist_node");
+    ros::init(argc, argv, "Dist_node");
 
-	ros::NodeHandle n;
+    ros::NodeHandle n;
 
-	ros::Subscriber sub_pos = n.subscribe("/fix", 1000, callbackFix);
-	//ros::Subscriber sub_cmd = n.subscribe("/cmd_vel", 1000, callbackCmd);
-	ros::Subscriber sub_cmd = n.subscribe("/rc/cmd", 1000, callbackCmd);
-	ros::Subscriber sub_heading = n.subscribe("/heading", 1000, callbackHeading);
-	ros::Subscriber sub_rc_enabled = n.subscribe("/rc/enabled", 1000, callbackRcEnabled);
-
-
-	std::vector<std::vector<double>> points;
-
-	double lat_0  = 48.40157318;
-	double lon_0 = -4.519289017;
-	double lat_1 = 48.40166092; 
-	double lon_1 = -4.519164562;
-	double lat_2 = 48.40177155; 
-	double lon_2 = -4.519581318;
-	double lat_3  = 48.40175247;
-	double lon_3 = -4.51984024;
+    ros::Subscriber sub_pos = n.subscribe("/fix", 1000, callbackFix);
+    //ros::Subscriber sub_cmd = n.subscribe("/cmd_vel", 1000, callbackCmd);
+    ros::Subscriber sub_cmd = n.subscribe("/rc/cmd", 1000, callbackCmd);
+    ros::Subscriber sub_heading = n.subscribe("/heading", 1000, callbackHeading);
+    ros::Subscriber sub_rc_enabled = n.subscribe("/rc/enabled", 1000, callbackRcEnabled);
 
 
-	float x_wp[4];
-	float y_wp[4];
+    std::vector<std::vector<double>> points;
 
-	LatLonToUTMXY(lat_0,lon_0,0,y_wp[0],x_wp[0]);
-	LatLonToUTMXY(lat_1,lon_1,0,y_wp[1],x_wp[1]);
-	LatLonToUTMXY(lat_2,lon_2,0,y_wp[2],x_wp[2]);
-	LatLonToUTMXY(lat_3,lon_3,0,y_wp[3],x_wp[3]);
-
-
-	pos_x_init = x_wp[0];
-	pos_y_init = y_wp[0];
-
-	for(int i = 0; i < 4;i++)
-	{
-		x_wp[i] -= pos_x_init;
-		y_wp[i] -= pos_y_init;
-		points.push_back({x_wp[i],y_wp[i]});
-	}
-	points.push_back({x_wp[0],y_wp[0]});
+    double lat_0  = 48.40157318;
+    double lon_0 = -4.519289017;
+    double lat_1 = 48.40166092;
+    double lon_1 = -4.519164562;
+    double lat_2 = 48.40177155;
+    double lon_2 = -4.519581318;
+    double lat_3  = 48.40175247;
+    double lon_3 = -4.51984024;
 
 
+    float x_wp[4];
+    float y_wp[4];
 
-	
+    LatLonToUTMXY(lat_0,lon_0,0,y_wp[0],x_wp[0]);
+    LatLonToUTMXY(lat_1,lon_1,0,y_wp[1],x_wp[1]);
+    LatLonToUTMXY(lat_2,lon_2,0,y_wp[2],x_wp[2]);
+    LatLonToUTMXY(lat_3,lon_3,0,y_wp[3],x_wp[3]);
+
+
+    pos_x_init = x_wp[0];
+    pos_y_init = y_wp[0];
+
+    for(int i = 0; i < 4;i++)
+    {
+        x_wp[i] -= pos_x_init;
+        y_wp[i] -= pos_y_init;
+        points.push_back({x_wp[i],y_wp[i]});
+    }
+    points.push_back({x_wp[0],y_wp[0]});
+
+
+
+
     vibes::newFigure("Trajectory");
     vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 1000, "height", 1000));
     vibes::axisLimits(-100., 100., -100., 100.);
     vibes::drawLine(points,"red[red]");
-	ros::spin();
-   
+    ros::spin();
 
-  
-	return 0;
+
+
+    return 0;
 }
