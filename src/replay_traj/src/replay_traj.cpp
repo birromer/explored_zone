@@ -59,8 +59,8 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 
 		Interval r(3.,4.);
 		double r_min = 3, r_max=4;
-		double th_min = -M_PI/10;
-		double th_max = M_PI/10.;
+		double th_min = -35;
+		double th_max = 35;
   		Interval theta(-M_PI/10.,M_PI/10.);
 		
   		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     std::vector<std::vector<double>> points;
 
     // penfeld
-/*
+
     double lat_0  = 48.40157318;
     double lon_0 = -4.519289017;
     double lat_1 = 48.40166092;
@@ -150,17 +150,17 @@ int main(int argc, char **argv)
     double lon_2 = -4.519581318;
     double lat_3  = 48.40175247;
     double lon_3 = -4.51984024;
-*/
+
 
     // guerledan
-    double lat_0 = 48.200100;
+    /*double lat_0 = 48.200100;
     double lon_0 = -3.016789;
     double lat_1 = 48.200193;
     double lon_1 = -3.015264;
     double lat_2 = 48.198639;
     double lon_2 = -3.015064;
     double lat_3 = 48.198763;
-    double lon_3 = -3.016315;
+    double lon_3 = -3.016315;*/
 
     float x_wp[4];
     float y_wp[4];
