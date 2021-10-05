@@ -1,5 +1,32 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(replay_traj)
+# Adding IBEX
+
+  # In case you installed IBEX in a local directory, you need
+  # to specify its path with the CMAKE_PREFIX_PATH option.
+  # set(CMAKE_PREFIX_PATH "~/ibex-lib/build_install")
+
+  find_package(IBEX REQUIRED)
+  ibex_init_common() # IBEX should have installed this function
+  message(STATUS "Found IBEX version ${IBEX_VERSION}")
+
+# Adding Eigen3
+
+  # In case you installed Eigen3 in a local directory, you need
+  # to specify its path with the CMAKE_PREFIX_PATH option, e.g.
+  # set(CMAKE_PREFIX_PATH "~/eigen/build_install")
+
+  find_package(Eigen3 REQUIRED NO_MODULE)
+  message(STATUS "Found Eigen3 version ${EIGEN3_VERSION}")
+
+# Adding Codac
+
+  # In case you installed Codac in a local directory, you need
+  # to specify its path with the CMAKE_PREFIX_PATH option.
+  # set(CMAKE_PREFIX_PATH "~/codac/build_install")
+
+  find_package(CODAC REQUIRED)
+  message(STATUS "Found Codac version ${CODAC_VERSION}")
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -14,6 +41,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   message_generation
+  
 )
 find_package(PROJ)
 
@@ -114,16 +142,17 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-
+add_executable(replay_traj src/replay_traj.cpp src/vibes.cpp src/UTM.cpp)
+target_compile_options(${PROJECT_NAME} PUBLIC ${CODAC_CXX_FLAGS})
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS} ${CODAC_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS}
 )
 
 
-add_executable(replay_traj src/replay_traj.cpp src/vibes.cpp src/UTM.cpp)
-target_link_libraries(replay_traj ${catkin_LIBRARIES} ${PROJ_LIBRARIES})
+
+target_link_libraries(replay_traj ${catkin_LIBRARIES} ${PROJ_LIBRARIES} ${CODAC_LIBRARIES} Ibex::ibex ${CODAC_LIBRARIES} Ibex::ibex)
 
 

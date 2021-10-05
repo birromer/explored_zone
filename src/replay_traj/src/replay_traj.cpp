@@ -5,9 +5,15 @@
 #include "std_msgs/Bool.h"
 #include <cmath>
 #include "UTM.h"
+#undef pi
 #include "vibes.h"
 #include <proj.h>
 #include <iostream>
+#include <codac.h>
+
+
+using namespace codac;
+VIBesFig *fig;
 
 bool switchOn = false;
 bool autoOn = false;
@@ -42,6 +48,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 	//if(autoOn and !switchOn and state != 2)
 	
 	{
+		
 		state = 1;
 
 		ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
@@ -50,7 +57,15 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 		pos_x -= pos_x_init;
 		pos_y -= pos_y_init;
 		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1.);
-	}
+
+		Interval r(3.,4.);
+		double r_min = 3, r_max=4;
+		double th_min = -M_PI/10;
+		double th_max = M_PI/10.;
+  		Interval theta(-M_PI/10.,M_PI/10.);
+		
+  		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
+		vibes::drawPie((pos_x, pos_y), (r_min, r_max), (th_min, th_max), true, vibes::vibesParams("figure", "Trajectory"));
 
 	if(state == 1 and switchOn)
 	{
@@ -61,10 +76,12 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 }
 
 
-
 int main(int argc, char **argv)
 {
 
+  vibes::beginDrawing();
+  fig = new VIBesFig("Trajectory");
+  
 /*
 	PJ_CONTEXT *C;
     PJ *P;
@@ -154,7 +171,7 @@ int main(int argc, char **argv)
 
 
 
-	vibes::beginDrawing();
+	
     vibes::newFigure("Trajectory");
     vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 1000, "height", 1000));
     vibes::axisLimits(-100., 100., -100., 100.);
