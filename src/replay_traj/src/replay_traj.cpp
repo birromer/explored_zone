@@ -44,9 +44,7 @@ void callbackHeading(const std_msgs::Float64& msg)
 void callbackFix(const sensor_msgs::NavSatFix& msg)
 {
 
-        //ROS_WARN("autoOn: %d | switchOn: %d | state: %d", autoOn, switchOn, state);
-    //if(autoOn and !switchOn and state != 2)
-
+    //if(autoOn and !switchOn and state != 2) {
         state = 1;
 
         ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
@@ -63,14 +61,13 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
         Interval theta(-M_PI/10.,M_PI/10.);
 
         //fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
-        vibes::drawPie((pos_x, pos_y), (r_min, r_max), (th_min, th_max), true, vibes::vibesParams("figure", "Trajectory"));
+        vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, vibesParams("figure", "Vision"));
+    //}
 
     if(state == 1 and switchOn)
     {
         state = 2;
     }
-
-
 }
 
 
@@ -78,7 +75,7 @@ int main(int argc, char **argv)
 {
 
   vibes::beginDrawing();
-  fig = new VIBesFig("Trajectory");
+  fig = new VIBesFig("Vision");
 
 /*
     PJ_CONTEXT *C;
@@ -123,7 +120,6 @@ int main(int argc, char **argv)
     //proj_destroy (P);
   //  proj_context_destroy (C); /* may be omitted in the single threaded case */
 
-
     ros::init(argc, argv, "Dist_node");
 
     ros::NodeHandle n;
@@ -134,18 +130,27 @@ int main(int argc, char **argv)
     ros::Subscriber sub_heading = n.subscribe("/heading", 1000, callbackHeading);
     ros::Subscriber sub_rc_enabled = n.subscribe("/rc/enabled", 1000, callbackRcEnabled);
 
-
     std::vector<std::vector<double>> points;
 
-    double lat_0  = 48.40157318;
-    double lon_0 = -4.519289017;
-    double lat_1 = 48.40166092;
-    double lon_1 = -4.519164562;
-    double lat_2 = 48.40177155;
-    double lon_2 = -4.519581318;
-    double lat_3  = 48.40175247;
-    double lon_3 = -4.51984024;
+    // penfeld
+//    double lat_0  = 48.40157318;
+//    double lon_0 = -4.519289017;
+//    double lat_1 = 48.40166092;
+//    double lon_1 = -4.519164562;
+//    double lat_2 = 48.40177155;
+//    double lon_2 = -4.519581318;
+//    double lat_3  = 48.40175247;
+//    double lon_3 = -4.51984024;
 
+    // guerledan
+    double lat_0 = 48.200100;
+    double lon_0 = -3.016789;
+    double lat_1 = 48.200193;
+    double lon_1 = -3.015264;
+    double lat_2 = 48.198763;
+    double lon_2 = -3.016315;
+    double lat_3 = 48.198639;
+    double lon_3 = -3.015064;
 
     float x_wp[4];
     float y_wp[4];
@@ -154,7 +159,6 @@ int main(int argc, char **argv)
     LatLonToUTMXY(lat_1,lon_1,0,y_wp[1],x_wp[1]);
     LatLonToUTMXY(lat_2,lon_2,0,y_wp[2],x_wp[2]);
     LatLonToUTMXY(lat_3,lon_3,0,y_wp[3],x_wp[3]);
-
 
     pos_x_init = x_wp[0];
     pos_y_init = y_wp[0];
@@ -167,16 +171,11 @@ int main(int argc, char **argv)
     }
     points.push_back({x_wp[0],y_wp[0]});
 
-
-
-
     vibes::newFigure("Trajectory");
     vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 1000, "height", 1000));
     vibes::axisLimits(-100., 100., -100., 100.);
     vibes::drawLine(points,"red[red]");
     ros::spin();
-
-
 
     return 0;
 }
