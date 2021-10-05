@@ -60,7 +60,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 		Interval r(3.,4.);
 		double r_min = 3, r_max=4;
 		double th_min = -35;
-		double th_max = 35;
+		double th_max = 35; // bite
   		Interval theta(-M_PI/10.,M_PI/10.);
 		
   		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
