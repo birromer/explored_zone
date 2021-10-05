@@ -47,7 +47,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 		//ROS_WARN("autoOn: %d | switchOn: %d | state: %d", autoOn, switchOn, state);
 	//if(autoOn and !switchOn and state != 2)
 	
-	{
+	
 		
 		state = 1;
 
@@ -65,7 +65,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
   		Interval theta(-M_PI/10.,M_PI/10.);
 		
   		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
-		vibes::drawPie((pos_x, pos_y), (r_min, r_max), (th_min, th_max), true, vibes::vibesParams("figure", "Trajectory"));
+		vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
 
 	if(state == 1 and switchOn)
 	{
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 {
 
   vibes::beginDrawing();
-  fig = new VIBesFig("Trajectory");
+  vibes::newFigure("Vision");
   
 /*
 	PJ_CONTEXT *C;
