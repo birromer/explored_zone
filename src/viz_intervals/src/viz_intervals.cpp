@@ -11,7 +11,6 @@
 #include <iostream>
 #include <codac.h>
 
-
 using namespace codac;
 VIBesFig *fig;
 
@@ -28,36 +27,29 @@ float ancien_pos_y;
 double current_heading;
 //rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
 
-
-void callbackRcEnabled(const std_msgs::Bool& msg)
-{
+void callbackRcEnabled(const std_msgs::Bool& msg) {
     switchOn = msg.data;
 }
 
-void callbackCmd(const geometry_msgs::Twist& msg)
-{
+void callbackCmd(const geometry_msgs::Twist& msg) {
     autoOn = true;
 }
 
-void callbackHeading(const std_msgs::Float64& msg)
-{
+void callbackHeading(const std_msgs::Float64& msg) {
     current_heading = msg.data;
 }
 
-void callbackFix(const sensor_msgs::NavSatFix& msg)
-{
+void callbackFix(const sensor_msgs::NavSatFix& msg) {
+    //if(autoOn and !switchOn and state != 2) {
+    state = 1;
 
-    //if(autoOn and !switchOn and state != 2)
-        state = 1;
+    ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp.sec);
+    float pos_y,pos_x;
+    LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
+    pos_x -= pos_x_init;
+    pos_y -= pos_y_init;
 
-        ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
-        float pos_y,pos_x;
-        LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
-        pos_x -= pos_x_init;
-        pos_y -= pos_y_init;
-
-        if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y))
-        {
+    if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y)) {
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
 
@@ -69,9 +61,10 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 
         //fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
         vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
-        }
-        ancien_pos_x = pos_x;
-        ancien_pos_y = pos_y;
+    }
+
+    ancien_pos_x = pos_x;
+    ancien_pos_y = pos_y;
     //}
 
     if(state == 1 and switchOn)
@@ -81,13 +74,10 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 }
 
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
   vibes::beginDrawing();
-
   vibes::newFigure("Vision");
-
 
 /*
     PJ_CONTEXT *C;
