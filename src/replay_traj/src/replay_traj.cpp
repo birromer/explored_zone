@@ -22,6 +22,9 @@ int state = 0;
 float pos_x_init;
 float pos_y_init;
 
+float ancien_pos_x;
+float ancien_pos_y;
+
 double current_heading;
 //rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
 
@@ -55,17 +58,22 @@ void callbackFix(const sensor_msgs::NavSatFix& msg)
 		LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
 		pos_x -= pos_x_init;
 		pos_y -= pos_y_init;
-		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1.);
+		
+		if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y))
+		{
+		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
 
 		Interval r(3.,4.);
 		double r_min = 3, r_max=4;
-		double th_min = -35;
-		double th_max = 35; // bite
+		double th_min = -35 + (current_heading)*180./M_PI;
+		double th_max = 35 + (current_heading)*180./M_PI; 
   		Interval theta(-M_PI/10.,M_PI/10.);
 		
   		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
 		vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
-
+		}
+		ancien_pos_x = pos_x;
+		ancien_pos_y = pos_y;
 
 
     //}
