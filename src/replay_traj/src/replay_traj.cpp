@@ -47,33 +47,34 @@ void callbackHeading(const std_msgs::Float64& msg)
 void callbackFix(const sensor_msgs::NavSatFix& msg)
 {
 
-	//if(autoOn and !switchOn and state != 2)
-	
-	
-		
-		state = 1;
+    //if(autoOn and !switchOn and state != 2)
 
-		ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
-		float pos_y,pos_x;
-		LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
-		pos_x -= pos_x_init;
-		pos_y -= pos_y_init;
-		
-		if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y))
-		{
-		vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
 
-		Interval r(3.,4.);
-		double r_min = 3, r_max=4;
-		double th_min = -35 + (current_heading)*180./M_PI;
-		double th_max = 35 + (current_heading)*180./M_PI; 
-  		Interval theta(-M_PI/10.,M_PI/10.);
-		
-  		//fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
-		vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
-		}
-		ancien_pos_x = pos_x;
-		ancien_pos_y = pos_y;
+
+        state = 1;
+
+        ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp);
+        float pos_y,pos_x;
+        LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
+        pos_x -= pos_x_init;
+        pos_y -= pos_y_init;
+
+        if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y))
+        {
+        vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
+            vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
+
+        Interval r(3.,4.);
+        double r_min = 3, r_max=4;
+        double th_min = -35 + (current_heading)*180./M_PI;
+        double th_max = 35 + (current_heading)*180./M_PI;
+        Interval theta(-M_PI/10.,M_PI/10.);
+
+        //fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
+        vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
+        }
+        ancien_pos_x = pos_x;
+        ancien_pos_y = pos_y;
 
 
     //}

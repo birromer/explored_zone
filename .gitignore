@@ -1,3 +1,4 @@
 build/
 devel/
+data/
 .catkin_workspace
