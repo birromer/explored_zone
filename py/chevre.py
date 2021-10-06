@@ -38,4 +38,4 @@ params = {'color_in': 'transparent[transparent]', 'color_out':'black[blue]', 'co
 pib.pySIVIA([[-L,L],[-L,L]], Sa, 0.5, draw_boxes=True, save_result=False, **params)
 
 for m_ in m:
-   vibes.drawBox(m_[0][0], m_[0][1], m_[1][0], m_[1][1], '[k]')
+    vibes.drawBox(m_[0][0], m_[0][1], m_[1][0], m_[1][1], '[k]')

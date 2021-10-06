@@ -3,3 +3,5 @@ devel/
 data/
 .catkin_workspace
 gmon.out
+py/projection_surface/.mypy_cache
+py/*/.mypy_cache
