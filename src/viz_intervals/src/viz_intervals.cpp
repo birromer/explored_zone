@@ -32,8 +32,8 @@ double ancien_pos_y;
 double current_heading;
 
 // angle of the camera view
-#define angle_camera_x 70.*0.5*M_PI/180.
-#define angle_camera_y 60.*0.5*M_PI/180.
+float angle_camera_x = 70.*0.5*M_PI/180.;
+float angle_camera_y = 60.*0.5*M_PI/180.;
 
 Eigen::Vector2f proj_cam_water(Eigen::Vector3f pos, Eigen::Quaternion<float> R, Eigen::Vector2f pos_img, float dist_max) {
     Eigen::Vector3f target {1, -pos_img[0] * tan(angle_camera_x), -pos_img[1]*tan(angle_camera_y)};
@@ -79,13 +79,13 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
     //if(autoOn and !switchOn and state != 2) {
     state = 1;
 
-    ROS_WARN("lat: %f | long: %f | stamp: %d", msg.latitude, msg.longitude, msg.header.stamp.sec);
     float pos_y,pos_x;
     LatLonToUTMXY(msg.latitude, msg.longitude, 0, pos_y, pos_x);
     pos_x -= pos_x_init;
     pos_y -= pos_y_init;
 
     if ((ancien_pos_x != pos_x) || (ancien_pos_y != pos_y)) {
+        ROS_WARN("lat: %f | long: %f | stamp: %d", msg.latitude, msg.longitude, msg.header.stamp.sec);
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
 
@@ -101,6 +101,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
           * Eigen::AngleAxis<float>(rot_y, Eigen::Vector3f::UnitY())
           * Eigen::AngleAxis<float>(rot_x, Eigen::Vector3f::UnitX());
 
+        // points in the image that we want to get the position in real world
         std::vector<Eigen::Vector2f> pts_img = {
             Eigen::Vector2f(-1, 1),
             Eigen::Vector2f(-1,-1),
@@ -109,9 +110,8 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
             Eigen::Vector2f(-1, 1)
         };
 
-//        std::vector<Eigen::Vector2f>* pts_water = new std::vector<Eigen::Vector2f>;
         std::vector<Eigen::Vector2f> pts_water;
-        pts_water.reserve(5);
+        pts_water.reserve(5);  // change here according to the name of lines beings used in the camera approximation
 
         Eigen::Vector3f pos{pos_x, pos_y, 1.0};
 
@@ -126,6 +126,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         for (Eigen::Vector2f pt_water : pts_water) {
             std::cout << pt_water[0] << " " << pt_water[1] << " | ";
         }
+        std::cout << endl;
 
         vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
     }
@@ -210,7 +211,6 @@ int main(int argc, char **argv) {
 //    double lon_2 = -4.519581318;
 //    double lat_3  = 48.40175247;
 //    double lon_3 = -4.51984024;
-
 
     // guerledan
     double lat_0 = 48.200100;
