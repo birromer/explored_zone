@@ -11,7 +11,7 @@ def proj(pos, R, pos_img, dist_max=10):
     t = t/np.linalg.norm(t)
     t = R@t
 
-    if t[2][0]<0:
+    if t[2][0] < 0:
         if -pos[2][0]/t[2][0] < dist_max:
             c = -pos[2][0]/t[2][0]*t+pos
             return np.array([c[0][0],c[1][0]])

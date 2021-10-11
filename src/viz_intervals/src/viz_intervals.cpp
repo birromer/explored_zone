@@ -3,13 +3,17 @@
 #include "geometry_msgs/Twist.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
+
+#include <iostream>
 #include <cmath>
+
 #include "UTM.h"
 #undef pi
 
 #include <proj.h>
-#include <iostream>
 #include <codac.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 using namespace codac;
 VIBesFig *fig;
@@ -18,14 +22,46 @@ bool switchOn = false;
 bool autoOn = false;
 int state = 0;
 
-float pos_x_init;
-float pos_y_init;
+double pos_x_init;
+double pos_y_init;
 
-float ancien_pos_x;
-float ancien_pos_y;
+double ancien_pos_x;
+double ancien_pos_y;
 
-double current_heading;
 //rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
+double current_heading;
+
+// angle of the camera view
+#define angle_camera_x 70.*0.5*M_PI/180.
+#define angle_camera_y 60.*0.5*M_PI/180.
+
+Eigen::Vector2f proj_cam_water(Eigen::Vector3f pos, Eigen::Quaternion<float> R, Eigen::Vector2f pos_img, float dist_max) {
+    Eigen::Vector3f target {1, -pos_img[0] * tan(angle_camera_x), -pos_img[1]*tan(angle_camera_y)};
+    target = target.normalized();
+    target = R * target;
+
+    Eigen::Vector3f center;
+
+    if (target[2] < 0) {  // z < 0
+        if (-pos[2] / target[2] < dist_max) {
+            center = -pos[2]/target[2]*target + pos;
+            return Eigen::Vector2f(center[0], center[1]);
+        }
+    }
+
+    target[2] = 0.;
+
+    if (target.norm() == 0) {
+        return Eigen::Vector2f(pos[0], pos[1]);
+    }
+
+    target = target.normalized();
+
+    center = dist_max*target + pos;
+
+    return Eigen::Vector2f(center[0], center[1]);
+}
+
 
 void callbackRcEnabled(const std_msgs::Bool& msg) {
     switchOn = msg.data;
@@ -43,23 +79,54 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
     //if(autoOn and !switchOn and state != 2) {
     state = 1;
 
-    ROS_WARN("lat: %f | long: %f | stamp: %f", msg.latitude, msg.longitude, msg.header.stamp.sec);
+    ROS_WARN("lat: %f | long: %f | stamp: %d", msg.latitude, msg.longitude, msg.header.stamp.sec);
     float pos_y,pos_x;
-    LatLonToUTMXY(msg.latitude,msg.longitude,0,pos_y,pos_x);
+    LatLonToUTMXY(msg.latitude, msg.longitude, 0, pos_y, pos_x);
     pos_x -= pos_x_init;
     pos_y -= pos_y_init;
 
-    if ((ancien_pos_x != pos_x) && (ancien_pos_y != pos_y)) {
+    if ((ancien_pos_x != pos_x) || (ancien_pos_y != pos_y)) {
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
 
         Interval r(3.,4.);
         double r_min = 3, r_max=4;
         double th_min = -35 + (current_heading)*180./M_PI;
-        double th_max = 35 + (current_heading)*180./M_PI;
+        double th_max =  35 + (current_heading)*180./M_PI;
         Interval theta(-M_PI/10.,M_PI/10.);
 
-        //fig->draw_pie(pos_x, pos_y, r, theta, "blue[cyan]");
+        // rotation matrix of the robot, where is the camera
+        float rot_x=0., rot_y=0., rot_z=0.;  // angle in radians
+        auto R = Eigen::AngleAxis<float>(rot_z, Eigen::Vector3f::UnitZ())
+          * Eigen::AngleAxis<float>(rot_y, Eigen::Vector3f::UnitY())
+          * Eigen::AngleAxis<float>(rot_x, Eigen::Vector3f::UnitX());
+
+        std::vector<Eigen::Vector2f> pts_img = {
+            Eigen::Vector2f(-1, 1),
+            Eigen::Vector2f(-1,-1),
+            Eigen::Vector2f( 1,-1),
+            Eigen::Vector2f( 1, 1),
+            Eigen::Vector2f(-1, 1)
+        };
+
+//        std::vector<Eigen::Vector2f>* pts_water = new std::vector<Eigen::Vector2f>;
+        std::vector<Eigen::Vector2f> pts_water;
+        pts_water.reserve(5);
+
+        Eigen::Vector3f pos{pos_x, pos_y, 1.0};
+
+        double dist_max = 10.;
+
+        for (Eigen::Vector2f pt_img : pts_img) {
+            Eigen::Vector2f pt_water = proj_cam_water(pos, R, pt_img, dist_max);
+            pts_water.push_back(pt_water);
+        }
+
+        std::cout << "extremes of the area seen ";
+        for (Eigen::Vector2f pt_water : pts_water) {
+            std::cout << pt_water[0] << " " << pt_water[1] << " | ";
+        }
+
         vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
     }
 
