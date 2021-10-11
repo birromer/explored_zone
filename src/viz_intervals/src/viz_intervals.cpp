@@ -146,7 +146,6 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         double th_max =  35 + (current_heading)*180./M_PI;
         codac::Interval theta(-M_PI/10.,M_PI/10.);
 
-
         // rotation matrix of the robot, where is the camera
         float rot_x=0., rot_y=0., rot_z=0.;  // angle in radians
         auto R = Eigen::AngleAxis<float>(rot_z, Eigen::Vector3f::UnitZ())
@@ -155,11 +154,11 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
 
         // points in the image that we want to get the position in real world
         std::vector<Eigen::Vector2f> pts_img = {
-            Eigen::Vector2f(-1, 1),
-            Eigen::Vector2f(-1,-1),
-            Eigen::Vector2f( 1,-1),
             Eigen::Vector2f( 1, 1),
-            Eigen::Vector2f(-1, 1)
+            Eigen::Vector2f( 1,-1),
+            Eigen::Vector2f(-1,-1),
+            Eigen::Vector2f(-1, 1),
+            Eigen::Vector2f( 1, 1)
         };
 
         std::vector<Eigen::Vector2f> pts_water;
@@ -180,21 +179,27 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         }
         std::cout << endl;
 
-        zone.push_back({pos_x + 3,pos_y + 2});
-        zone.push_back({pos_x + 6,pos_y + 4});
-        zone.push_back({pos_x - 6,pos_y + 4});
-        zone.push_back({pos_x-3,pos_y + 2});
-        zone.push_back({pos_x + 3,pos_y + 2});
+        zone.push_back({pts_water[0][0], pts_water[0][1]});
+        zone.push_back({pts_water[1][0], pts_water[1][1]});
+        zone.push_back({pts_water[2][0], pts_water[2][1]});
+        zone.push_back({pts_water[3][0], pts_water[3][1]});
+        zone.push_back({pts_water[4][0], pts_water[4][1]});
+
+//        zone.push_back({pos_x+3, pos_y+2});
+//        zone.push_back({pos_x+6, pos_y+4});
+//        zone.push_back({pos_x-6, pos_y+4});
+//        zone.push_back({pos_x-3, pos_y+2});
+//        zone.push_back({pos_x+3, pos_y+2});
 
         float r1 = radius(pos_x, pos_y, zone[0], zone[3]);
         float r2 = radius(pos_x, pos_y, zone[1], zone[2]);
         float angle = angle_3_pts(pos_x, pos_y, zone[3], zone[0]);
 
-        zone[0] = rotate_pt(zone[0], -current_heading+M_PI/2, pos_x, pos_y);
-        zone[1] = rotate_pt(zone[1], -current_heading+M_PI/2, pos_x, pos_y);
-        zone[2] = rotate_pt(zone[2], -current_heading+M_PI/2, pos_x, pos_y);
-        zone[3] = rotate_pt(zone[3], -current_heading+M_PI/2, pos_x, pos_y);
-        zone[4] = rotate_pt(zone[4], -current_heading+M_PI/2, pos_x, pos_y);
+        zone[0] = rotate_pt(zone[0], -current_heading, pos_x, pos_y);
+        zone[1] = rotate_pt(zone[1], -current_heading, pos_x, pos_y);
+        zone[2] = rotate_pt(zone[2], -current_heading, pos_x, pos_y);
+        zone[3] = rotate_pt(zone[3], -current_heading, pos_x, pos_y);
+        zone[4] = rotate_pt(zone[4], -current_heading, pos_x, pos_y);
 
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
