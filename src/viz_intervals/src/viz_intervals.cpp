@@ -98,8 +98,8 @@ float radius(float c_x, float c_y, std::vector<double> p1, std::vector<double> p
     //return d1;
 }
 
-float angle(float c_x, float c_y, std::vector<double> p1, std::vector<double> p2){
-    //compute the angle between the robot and 2 points
+float angle_3_pts(float c_x, float c_y, std::vector<double> p1, std::vector<double> p2){
+    //compute the angle between 3 points, the center being the robot in this context
     float p12 = std::sqrt(std::pow(c_x-p1[0], 2) + std::pow(c_y-p1[1], 2));
     float p13 = std::sqrt(std::pow(c_x-p2[0], 2) + std::pow(c_y-p2[1], 2));
     float p23 = std::sqrt(std::pow(p1[0]-p2[0], 2) + std::pow(p1[1]-p2[1], 2));
@@ -129,6 +129,7 @@ std::pair<float, float> center(std::vector<double> p1, std::vector<double> p2, s
 void callbackFix(const sensor_msgs::NavSatFix& msg) {
     //if(autoOn and !switchOn and state != 2) {
     state = 1;
+    std::vector<std::vector<double>> zone;
 
     float pos_y,pos_x;
     LatLonToUTMXY(msg.latitude, msg.longitude, 0, pos_y, pos_x);
@@ -187,7 +188,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
 
         float r1 = radius(pos_x, pos_y, zone[0], zone[3]);
         float r2 = radius(pos_x, pos_y, zone[1], zone[2]);
-        float angle = angle(pos_x, pos_y, zone[3], zone[0]);
+        float angle = angle_3_pts(pos_x, pos_y, zone[3], zone[0]);
 
         zone[0] = rotate_pt(zone[0], -current_heading+M_PI/2, pos_x, pos_y);
         zone[1] = rotate_pt(zone[1], -current_heading+M_PI/2, pos_x, pos_y);
