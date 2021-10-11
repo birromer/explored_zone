@@ -271,8 +271,8 @@ int main(int argc, char **argv) {
     points.push_back({x_wp[0],y_wp[0]});
 
     vibes::newFigure("Trajectory");
-    vibes::setFigureProperties("Trajectory",vibesParams("x", 40, "y", -80,"width", 500, "height", 500));
-    vibes::axisLimits(-100., 100., -100., 100.);
+    vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 800, "height", 800));
+    vibes::axisLimits(-250., 250., -250., 250.);
     vibes::drawLine(points,"red[red]");
     ros::spin();
 
