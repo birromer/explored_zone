@@ -185,12 +185,6 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         zone.push_back({pts_water[3][0], pts_water[3][1]});
         zone.push_back({pts_water[4][0], pts_water[4][1]});
 
-//        zone.push_back({pos_x+3, pos_y+2});
-//        zone.push_back({pos_x+6, pos_y+4});
-//        zone.push_back({pos_x-6, pos_y+4});
-//        zone.push_back({pos_x-3, pos_y+2});
-//        zone.push_back({pos_x+3, pos_y+2});
-
         float r1 = radius(pos_x, pos_y, zone[0], zone[3]);
         float r2 = radius(pos_x, pos_y, zone[1], zone[2]);
         float angle = angle_3_pts(pos_x, pos_y, zone[3], zone[0]);
