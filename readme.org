@@ -3,6 +3,52 @@
 * Explored Zone
 This project is an attempt on computing the guaranteed explored zone in a robotic mission, using the uncertainties on the robot's position and orientation.
 
-* Installation
+* Instructions
+** Setup
+The project has a specific structure for working, as shown bellow. The most important detail missing in this repository is the data folder, which may contain the acquisitions from experiments.
+
+Example structure:
+#+begin_src bash :exports results :results output
+tree -nd -L 2
+#+end_src
+
+#+RESULTS:
+#+begin_example
+.
+├── data
+│   ├── bags
+│   ├── extracted
+│   └── images
+├── py
+│   ├── data
+│   ├── src
+│   └── test
+├── reference
+│   ├── magmap
+│   ├── paper_guaranteed_aprox_zone
+│   └── paper_thick_set_inversion
+└── src
+    ├── ctrl
+    ├── extract_from_bag
+    ├── hardware_link
+    ├── mark_wp
+    ├── remote_control
+    ├── replay_traj
+    ├── robot
+    ├── serial
+    ├── simulation
+    ├── thickset_impl
+    ├── visualisation_zone
+    ├── viz_intervals
+    └── wayfinder_ros
+
+26 directories
+#+end_example
+
+** Dependencies
+First install the following dependencies:
+- [[https://github.com/rogersce/cnpy#installation][cnpy]]: library for loading .npz numpy arrays in c++, letting us ignore ROS during testing
+- [[https://proj.org/install.html][proj]]: library for transforming projection coordinate systems
+- [[https://www.codac.io/install/01-installation.html][codac]]: library for interval analysis computations and visualization
 
 * Usage

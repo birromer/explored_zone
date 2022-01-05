@@ -10,24 +10,23 @@ DATA_DIR = "../data/extracted/bag_2021-10-07-11-09-50"
 if __name__ == "__main__":
 ##### LOAD DATA
     print("Reading data")
-    # loading data (heading)
+    # load heading
     hd = np.load(os.path.join(DATA_DIR, "heading.npz"))
     heading = hd['heading']
-#    accuracy_heading = 0.1
 
-    # loading  (imu)
+    # load imu
     imu = np.load(os.path.join(DATA_DIR, "imu.npz"))
     t_imu = imu['imu_t']
     imu_orient, imu_orient_cov = imu['imu_orient'], imu['imu_orient_cov']
     imu_ang_vel, imu_ang_vel_cov = imu['imu_ang_vel'], imu['imu_ang_vel_cov']
     imu_lin_acc, imu_lin_acc_cov = imu['imu_lin_acc'], imu['imu_lin_acc_cov']
 
-    # Loading  (gnss)
+    # Load gnss
     gps = np.load(os.path.join(DATA_DIR, "gps.npz"))
     t_gps, gps_status = gps['gps_t'], gps['gps_status']
     gps_pos, gps_pos_cov = gps['gps_pos'], gps['gps_pos_cov']
 
-    # loading  (mag flag)
+    # load magnetometer flag
     mag = np.load(os.path.join(DATA_DIR, "mag_flag.npz"))
     mag_flag = mag['using_mag']
 
@@ -65,3 +64,6 @@ if __name__ == "__main__":
     x = TubeVector(tdomain, dt, IntervalVector(4))
     v = TubeVector(tdomain, dt, IntervalVector(4))
     u = TubeVector(tdomain, dt, IntervalVector(2))
+
+##### ADD DATA TO TUBES
+    # add heading
