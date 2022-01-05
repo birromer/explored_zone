@@ -28,7 +28,8 @@ double pos_y_init;
 double ancien_pos_x;
 double ancien_pos_y;
 
-//rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
+//! rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
+//! rosrun viz_intervals viz_intervals
 double current_heading;
 
 // angle of the camera view
@@ -147,7 +148,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         codac::Interval theta(-M_PI/10.,M_PI/10.);
 
         // rotation matrix of the robot, where is the camera
-        float rot_x=0., rot_y=0., rot_z=0.;  // angle in radians
+        float rot_x=0, rot_y=0., rot_z=0.;  // angle in radians
         auto R = Eigen::AngleAxis<float>(rot_z, Eigen::Vector3f::UnitZ())
           * Eigen::AngleAxis<float>(rot_y, Eigen::Vector3f::UnitY())
           * Eigen::AngleAxis<float>(rot_x, Eigen::Vector3f::UnitX());

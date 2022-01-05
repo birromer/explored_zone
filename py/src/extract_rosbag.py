@@ -13,8 +13,13 @@ if __name__ == "__main__":
 ##### ROSBAG SETTINGS
     DATA_DIR = "../../data/bags"
     bag_filename = 'bag_2021-10-07-11-09-50.bag'
+    extracted_dir = "../../data/extracted/"+bag_filename[:-4]
+    os.mkdir(extracted_dir)
 
     bag_path = os.path.join(DATA_DIR, bag_filename)
+
+    print("Input bag:", bag_path)
+    print("Output folder: ", extracted_dir)
 #    bag_path =  sys.argv[1]
 
     bag = rosbag.Bag(bag_path, "r")
@@ -53,7 +58,7 @@ if __name__ == "__main__":
 
     for i in range(n_heading_msg):
         topic, msg, t = next(heading_msg)
-        theta = np.array([[msg]])  # transform msg in numpy array
+        theta = np.array([[msg.data]])  # transform msg in numpy array
         heading = np.concatenate((heading, theta), axis=0)
 
     print("Finished reading heading. Shape: ", heading.shape)
@@ -100,6 +105,7 @@ if __name__ == "__main__":
         # - linear acceleration covariance
         lin_acc_cov = np.array([msg.linear_acceleration_covariance])
         imu_lin_acc_cov = np.concatenate((imu_lin_acc_cov, lin_acc_cov), axis=0)
+
     print("Finished reading. Shapes:")
     print("IMU time ->", imu_t.shape)
     print("IMU orientation ->", imu_orient.shape)
@@ -159,5 +165,13 @@ if __name__ == "__main__":
     print("\nFinished reading rosbag", bag_filename)
 
     print("\nSaving data.")
+    np.savez(os.path.join(extracted_dir,"heading.npz"), heading)
+    np.savez_compressed(os.path.join(extracted_dir,"imu.npz"), imu_t, imu_orient, imu_orient_cov, imu_ang_vel, imu_ang_vel_cov, imu_lin_acc, imu_lin_acc_cov)
+    np.savez_compressed(os.path.join(extracted_dir,"gps.npz"), gps_t, gps_status, gps_pos, gps_pos_cov)
+    np.savez_compressed(os.path.join(extracted_dir,"mag_flag.npz"), using_mag)
+
+    np.savetxt(os.path.join(extracted_dir,"pos.txt"), gps_pos)
+    np.savetxt(os.path.join(extracted_dir,"imu_orient.txt"), imu_orient)
+    np.savetxt(os.path.join(extracted_dir,"heading.txt"), heading)
 
     print("\nFinished saving all data.")
