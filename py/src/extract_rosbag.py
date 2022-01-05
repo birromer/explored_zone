@@ -11,10 +11,11 @@ import sys
 if __name__ == "__main__":
 
 ##### ROSBAG SETTINGS
-    DATA_DIR = "../../data/bags"
+    DATA_DIR = "../data/bags"
+#    bag_filename = 'bag_2021-10-07-11-09-50.bag'
     bag_filename = 'bag_2021-10-07-11-09-50.bag'
-    extracted_dir = "../../data/extracted/"+bag_filename[:-4]
-    os.mkdir(extracted_dir)
+    extracted_dir = "../data/extracted/"+bag_filename[:-4]
+#    os.mkdir(extracted_dir)
 
     bag_path = os.path.join(DATA_DIR, bag_filename)
 
@@ -165,10 +166,17 @@ if __name__ == "__main__":
     print("\nFinished reading rosbag", bag_filename)
 
     print("\nSaving data.")
-    np.savez(os.path.join(extracted_dir,"heading.npz"), heading)
-    np.savez_compressed(os.path.join(extracted_dir,"imu.npz"), imu_t, imu_orient, imu_orient_cov, imu_ang_vel, imu_ang_vel_cov, imu_lin_acc, imu_lin_acc_cov)
-    np.savez_compressed(os.path.join(extracted_dir,"gps.npz"), gps_t, gps_status, gps_pos, gps_pos_cov)
-    np.savez_compressed(os.path.join(extracted_dir,"mag_flag.npz"), using_mag)
+    np.savez(os.path.join(extracted_dir,"heading.npz"), heading=heading)
+
+    np.savez_compressed(os.path.join(extracted_dir,"imu.npz"), imu_t=imu_t,
+                        imu_orient=imu_orient, imu_orient_cov=imu_orient_cov,
+                        imu_ang_vel=imu_ang_vel, imu_ang_vel_cov=imu_ang_vel_cov,
+                        imu_lin_acc=imu_lin_acc, imu_lin_acc_cov=imu_lin_acc_cov)
+
+    np.savez_compressed(os.path.join(extracted_dir,"gps.npz"), gps_t=gps_t,
+                        gps_status=gps_status, gps_pos=gps_pos, gps_pos_cov=gps_pos_cov)
+
+    np.savez_compressed(os.path.join(extracted_dir,"mag_flag.npz"), using_mag=using_mag)
 
     np.savetxt(os.path.join(extracted_dir,"pos.txt"), gps_pos)
     np.savetxt(os.path.join(extracted_dir,"imu_orient.txt"), imu_orient)
