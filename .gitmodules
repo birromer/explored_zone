@@ -1,0 +1,3 @@
+[submodule "src/thickset_impl"]
+	path = src/thickset_impl
+	url = https://github.com/birromer/mslam2

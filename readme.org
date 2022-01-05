@@ -1,0 +1,8 @@
+#+TITLE: Readme
+
+* Explored Zone
+This project is an attempt on computing the guaranteed explored zone in a robotic mission, using the uncertainties on the robot's position and orientation.
+
+* Installation
+
+* Usage

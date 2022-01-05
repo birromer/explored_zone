@@ -159,4 +159,5 @@ if __name__ == "__main__":
     print("\nFinished reading rosbag", bag_filename)
 
     print("\nSaving data.")
+
     print("\nFinished saving all data.")
