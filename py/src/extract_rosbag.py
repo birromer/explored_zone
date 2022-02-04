@@ -35,6 +35,10 @@ if __name__ == "__main__":
         for k, v in topic.items():
             print(k.ljust(20), v)
 
+    op = input("Do you with to continue? (yes/no) ")
+    if op == "n" or op == "no":
+        sys.exit(0)
+
 ##### EXTRACT DATA
     # create iterator for each topic
     heading_msg = bag.read_messages(topics=['/heading'])  # Float64
