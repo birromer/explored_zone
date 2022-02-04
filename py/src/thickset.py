@@ -98,8 +98,8 @@ if __name__ == "__main__":
 
     # create tubes x and v
     tdomain = Interval(t0, tf)
-    x = TubeVector(tdomain, dt, IntervalVector(6))  # pos, orient
-    v = TubeVector(tdomain, dt, IntervalVector(6))  # lin acc, ang vel
+    x = TubeVector(tdomain, dt, IntervalVector(6))  # position, orientation
+    v = TubeVector(tdomain, dt, IntervalVector(6))  # linear acceleration, angular velocity
     u = TubeVector(tdomain, dt, IntervalVector(2))
 
     ##### ADD DATA TO TUBES
@@ -147,19 +147,25 @@ if __name__ == "__main__":
     v[4] &= traj_ang_vel[1]
     v[5] &= traj_ang_vel[2]
 
-    #    x[3] &= traj_orient[0]
-    #    for idx,dim in enumerate(x[3]):
-    #        x[3].inflate(err_orient[0][idx])
-    #
-    #    x[4] &= Trajectory(dict(zip(t_gps, imu_orient[:,1])))
-    #    x[4].inflate(err_orient[1])
-    #
-    #    x[5] &= Trajectory(dict(zip(t_gps, imu_orient[:,2])))
-    #    x[5].inflate(err_orient[2])
+    # inflate with uncertainties
+    for t in t_gps:
+        print("t:", t)
+        x[0].slice(t).inflate(err_gps_pos[t][0])
+        x[1].slice(t).inflate(err_gps_pos[t][1])
+        x[2].slice(t).inflate(err_gps_pos[t][2])
 
-    #    start = 2575
-    #    for i in np.arange(start, start+25):
-    #        print("heading {} | imu_orient {}".format(heading[i], imu_orient[i]))
+        x[3].slice(t).inflate(err_orient[t][0])
+        x[4].slice(t).inflate(err_orient[t][1])
+        x[5].slice(t).inflate(err_orient[t][2])
+
+        v[0].slice(t).inflate(err_lin_acc[t][0])
+        v[1].slice(t).inflate(err_lin_acc[t][1])
+        v[2].slice(t).inflate(err_lin_acc[t][2])
+
+        v[3].slice(t).inflate(err_ang_vel[t][0])
+        v[4].slice(t).inflate(err_ang_vel[t][1])
+        v[5].slice(t).inflate(err_ang_vel[t][2])
+
 
     fig, axs = plt.subplots(2, 2)
     axs[0, 0].plot(t_gps, heading, "r", label="heading")
