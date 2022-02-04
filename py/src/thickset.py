@@ -98,24 +98,54 @@ if __name__ == "__main__":
 
     # create tubes x and v
     tdomain = Interval(t0, tf)
-    x = TubeVector(tdomain, dt, IntervalVector(12))  # pos, orient, lin vel, ang vel
-    v = TubeVector(tdomain, dt, IntervalVector(12))
+    x = TubeVector(tdomain, dt, IntervalVector(6))  # pos, orient
+    v = TubeVector(tdomain, dt, IntervalVector(6))  # lin acc, ang vel
     u = TubeVector(tdomain, dt, IntervalVector(2))
 
     ##### ADD DATA TO TUBES
-    # add heading
-    x.put(0,  Trajectory(dict(zip(t_gps, gps_pos[:,0]))))
-    x.put(1,  Trajectory(dict(zip(t_gps, gps_pos[:,1]))))
-    x.put(2,  Trajectory(dict(zip(t_gps, gps_pos[:,2]))))
-    x.put(3,  Trajectory(dict(zip(t_gps, imu_orient[:,0]))))
-    x.put(4,  Trajectory(dict(zip(t_gps, imu_orient[:,1]))))
-    x.put(5,  Trajectory(dict(zip(t_gps, imu_orient[:,2]))))
-    x.put(6,  Trajectory(dict(zip(t_gps, imu_lin_acc[:,0]))))
-    x.put(7,  Trajectory(dict(zip(t_gps, imu_lin_acc[:,1]))))
-    x.put(8,  Trajectory(dict(zip(t_gps, imu_lin_acc[:,2]))))
-    x.put(9,  Trajectory(dict(zip(t_gps, imu_ang_vel[:,0]))))
-    x.put(10, Trajectory(dict(zip(t_gps, imu_ang_vel[:,1]))))
-    x.put(11, Trajectory(dict(zip(t_gps, imu_ang_vel[:,2]))))
+    # create trajectories with correct tdomain
+    traj_gps = TrajectoryVector([
+        dict(zip(t_gps, gps_pos[:, 0])),
+        dict(zip(t_gps, gps_pos[:, 1])),
+        dict(zip(t_gps, gps_pos[:, 2]))
+    ])
+    traj_gps.truncate_tdomain(tdomain)
+
+    traj_orient = TrajectoryVector([
+        dict(zip(t_gps, imu_orient[:, 0])),
+        dict(zip(t_gps, imu_orient[:, 1])),
+        dict(zip(t_gps, imu_orient[:, 2]))
+    ])
+    traj_orient.truncate_tdomain(tdomain)
+
+    traj_lin_acc = TrajectoryVector([
+        dict(zip(t_gps, imu_lin_acc[:, 0])),
+        dict(zip(t_gps, imu_lin_acc[:, 1])),
+        dict(zip(t_gps, imu_lin_acc[:, 2]))
+    ])
+    traj_lin_acc.truncate_tdomain(tdomain)
+
+    traj_ang_vel = TrajectoryVector([
+        dict(zip(t_gps, imu_ang_vel[:, 0])),
+        dict(zip(t_gps, imu_ang_vel[:, 1])),
+        dict(zip(t_gps, imu_ang_vel[:, 2]))
+    ])
+    traj_ang_vel.truncate_tdomain(tdomain)
+
+    # update tubes with known data
+    x[0] &= traj_gps[0]
+    x[1] &= traj_gps[1]
+    x[2] &= traj_gps[2]
+    x[3] &= traj_orient[0]
+    x[4] &= traj_orient[1]
+    x[5] &= traj_orient[2]
+
+    v[0] &= traj_lin_acc[0]
+    v[1] &= traj_lin_acc[1]
+    v[2] &= traj_lin_acc[2]
+    v[3] &= traj_ang_vel[0]
+    v[4] &= traj_ang_vel[1]
+    v[5] &= traj_ang_vel[2]
 
     #    x[3] &= traj_orient[0]
     #    for idx,dim in enumerate(x[3]):
@@ -144,3 +174,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
     input()
+
+    # ADD CONTRACTOR NETWORK CONSTRAINTS
+    cn = ContractorNetwork()
