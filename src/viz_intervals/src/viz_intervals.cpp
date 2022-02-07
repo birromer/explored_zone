@@ -14,6 +14,9 @@
 #include <codac.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <fstream>
+#include <string>
+
 
 
 codac::VIBesFig *fig;
@@ -28,8 +31,7 @@ double pos_y_init;
 double ancien_pos_x;
 double ancien_pos_y;
 
-//! rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
-//! rosrun viz_intervals viz_intervals
+//rosbag play bag_2021-05-18-15-31-36.bag -r 5  -s 70 -u 300
 double current_heading;
 
 // angle of the camera view
@@ -126,8 +128,11 @@ std::pair<float, float> center(std::vector<double> p1, std::vector<double> p2, s
     c_y = a*c_x+c;
     return std::make_pair(c_x, c_y);
 }
+string const nomFichier("/home/robot/ros/explored_zone/src/viz_intervals/trapeze3.txt");
+std::ofstream monFlux(nomFichier.c_str());
 
 void callbackFix(const sensor_msgs::NavSatFix& msg) {
+    
     //if(autoOn and !switchOn and state != 2) {
     state = 1;
     std::vector<std::vector<double>> zone;
@@ -136,11 +141,20 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
     LatLonToUTMXY(msg.latitude, msg.longitude, 0, pos_y, pos_x);
     pos_x -= pos_x_init;
     pos_y -= pos_y_init;
+    //float zone0X, zone0Y;
+    //UTMXYToLatLon(pos_y, pos_x, 30, false, zone0X, zone0Y);
+    //monFlux<<pos_y<<" "<<zone0X*180/M_PI<<" "<<pos_x<<" "<<zone0Y*180/M_PI<<endl;
+    //monFlux<<pos_y<<" "<<msg.latitude<<" "<<pos_x<<" "<<msg.longitude<<endl;
+    //pos_x -= pos_x_init;
+    //pos_y -= pos_y_init;
+    //pos_x = msg.longitude;
+    //pos_y = msg.latitude;
 
     if ((ancien_pos_x != pos_x) || (ancien_pos_y != pos_y)) {
-        ROS_WARN("lat: %f | long: %f | stamp: %d", msg.latitude, msg.longitude, msg.header.stamp.sec);
+        //ROS_WARN("lat: %f | long: %f | stamp: %d", msg.latitude, msg.longitude, msg.header.stamp.sec);
 
-
+        
+        
         codac::Interval r(3.,4.);
         double r_min = 3, r_max=4;
         double th_min = -35 + (current_heading)*180./M_PI;
@@ -148,7 +162,7 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         codac::Interval theta(-M_PI/10.,M_PI/10.);
 
         // rotation matrix of the robot, where is the camera
-        float rot_x=0, rot_y=0., rot_z=0.;  // angle in radians
+        float rot_x=0., rot_y=0., rot_z=0.;  // angle in radians à changer!!!
         auto R = Eigen::AngleAxis<float>(rot_z, Eigen::Vector3f::UnitZ())
           * Eigen::AngleAxis<float>(rot_y, Eigen::Vector3f::UnitY())
           * Eigen::AngleAxis<float>(rot_x, Eigen::Vector3f::UnitX());
@@ -174,11 +188,11 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
             pts_water.push_back(pt_water);
         }
 
-        std::cout << "extremes of the area seen ";
+        /*std::cout << "extremes of the area seen ";
         for (Eigen::Vector2f pt_water : pts_water) {
             std::cout << pt_water[0] << " " << pt_water[1] << " | ";
         }
-        std::cout << endl;
+        std::cout << endl;*/
 
         zone.push_back({pts_water[0][0], pts_water[0][1]});
         zone.push_back({pts_water[1][0], pts_water[1][1]});
@@ -195,14 +209,17 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
         zone[2] = rotate_pt(zone[2], -current_heading, pos_x, pos_y);
         zone[3] = rotate_pt(zone[3], -current_heading, pos_x, pos_y);
         zone[4] = rotate_pt(zone[4], -current_heading, pos_x, pos_y);
-
+        //float zone0X, zone0Y;
+        //UTMXYToLatLon(zone[0][1], zone[0][0], 0, false, zone0X, zone0Y);
+        monFlux<<zone[0][1]<<" "<<zone[0][0]<<" "<<zone[1][1]<<" "<<zone[1][0]<<" "<<zone[2][1]<<" "<<zone[2][0]<<" "<<zone[3][1]<<" "<<zone[3][0]<<" "<<zone[4][1]<<" "<<zone[4][0]<<" "<<pos_x<<" "<<pos_y<<endl;
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Vision") );
         vibes::drawVehicle(pos_x, pos_y,(current_heading)*180./M_PI,1., vibesParams("figure", "Trajectory") );
 
-        vibes::drawPie(pos_x, pos_y, r1, r2, -(angle/2)+(current_heading)*180./M_PI, angle/2+(current_heading)*180./M_PI, "blue[blue]", vibesParams("figure", "Trajectory"));
+        //vibes::drawPie(pos_x, pos_y, r1, r2, -(angle/2)+(current_heading)*180./M_PI, angle/2+(current_heading)*180./M_PI, "blue[blue]", vibesParams("figure", "Trajectory"));
         vibes::drawLine(zone,"red[red]", vibesParams("figure", "Trajectory"));
 
 //        vibes::drawPie(pos_x, pos_y, r_min, r_max, th_min, th_max, "blue[blue]", vibesParams("figure", "Vision"));
+    
     }
 
     ancien_pos_x = pos_x;
@@ -216,7 +233,9 @@ void callbackFix(const sensor_msgs::NavSatFix& msg) {
 }
 
 
+
 int main(int argc, char **argv) {
+    
     vibes::beginDrawing();
     vibes::newFigure("Vision");
 
@@ -262,7 +281,8 @@ int main(int argc, char **argv) {
 
     pos_x_init = x_wp[0];
     pos_y_init = y_wp[0];
-
+    std::cout<<"pos_x_init: "<<pos_x_init<<std::endl;
+    std::cout<<"pos_y_init: "<<pos_y_init<<std::endl;
     for(int i = 0; i < 4;i++) {
         x_wp[i] -= pos_x_init;
         y_wp[i] -= pos_y_init;
@@ -271,8 +291,8 @@ int main(int argc, char **argv) {
     points.push_back({x_wp[0],y_wp[0]});
 
     vibes::newFigure("Trajectory");
-    vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 800, "height", 800));
-    vibes::axisLimits(-250., 250., -250., 250.);
+    //vibes::setFigureProperties("Trajectory",vibesParams("x", 100, "y", 100,"width", 800, "height", 800));
+    //vibes::axisLimits(-250., 250., -250., 250.);
     vibes::drawLine(points,"red[red]");
     ros::spin();
 
