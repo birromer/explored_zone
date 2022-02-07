@@ -37,7 +37,7 @@ float angle_camera_x = 70.*0.5*M_PI/180.;
 float angle_camera_y = 60.*0.5*M_PI/180.;
 
 Eigen::Vector2f proj_cam_water(Eigen::Vector3f pos, Eigen::Quaternion<float> R, Eigen::Vector2f pos_img, float dist_max) {
-    Eigen::Vector3f target {1, -pos_img[0] * tan(angle_camera_x), -pos_img[1]*tan(angle_camera_y)};
+    Eigen::Vector3f target {1, -pos_img[0]*tan(angle_camera_x), -pos_img[1]*tan(angle_camera_y)};
     target = target.normalized();
     target = R * target;
 
