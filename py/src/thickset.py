@@ -49,19 +49,19 @@ if __name__ == "__main__":
 
     err_orient = np.array(
         [imu_orient_cov[:, 0], imu_orient_cov[:, 4], imu_orient_cov[:, 8]]
-    )
+    ).T
     err_ang_vel = np.array(
         [imu_ang_vel_cov[:, 0], imu_ang_vel_cov[:, 4], imu_ang_vel_cov[:, 8]]
-    )
+    ).T
     err_lin_acc = np.array(
         [imu_lin_acc_cov[:, 0], imu_lin_acc_cov[:, 4], imu_lin_acc_cov[:, 8]]
-    )
+    ).T
 
     # Load gnss
     gps = np.load(os.path.join(DATA_DIR, "gps.npz"))
     t_gps, gps_status = gps["gps_t"], gps["gps_status"]
     gps_pos, gps_pos_cov = gps["gps_pos"], gps["gps_pos_cov"]
-    err_gps_pos = np.array([gps_pos_cov[:, 0], gps_pos_cov[:, 4], gps_pos_cov[:, 8]])
+    err_gps_pos = np.array([gps_pos_cov[:, 0], gps_pos_cov[:, 4], gps_pos_cov[:, 8]]).T
 
     # load magnetometer flag
     mag = np.load(os.path.join(DATA_DIR, "mag_flag.npz"))
@@ -82,6 +82,11 @@ if __name__ == "__main__":
     print("IMU linear acceleration ->", imu_lin_acc.shape)
     print("IMU linear acceleration  covariance ->", imu_lin_acc_cov.shape)
 
+    print("Error GPS position ->", err_gps_pos.shape)
+    print("Error orientation ->", err_orient.shape)
+    print("Error angular velocity ->", err_ang_vel.shape)
+    print("Error linear acceleration ->", err_lin_acc.shape)
+
     ##### CREATE TUBES
     # fix absolute time to starting in 0 sec
     t_gps[:, 0] = t_gps[:, 0] - t_gps[0, 0]
@@ -95,6 +100,22 @@ if __name__ == "__main__":
     # will be using the gps as reference, but very close to imu
     t0, tf, dt = t_gps[0], t_gps[-1], t_gps[1] - t_gps[0]
     print("T0={}, Tf={}, dt={}".format(t0, tf, dt))
+
+    #TODO: find why of the difference
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].plot(t_gps, heading, "r", label="heading")
+    axs[0, 0].plot(t_gps, imu_orient[:, 0], "b", label="roll")
+
+    axs[0, 1].plot(t_gps, heading, "r", label="heading")
+    axs[0, 1].plot(t_gps, imu_orient[:, 1], "g", label="pitch")
+
+    axs[1, 0].plot(t_gps, heading, "r", label="heading")
+    axs[1, 0].plot(t_gps, imu_orient[:, 2], "y", label="yaw")
+
+    plt.legend()
+    plt.show()
+    input()
+
 
     # create tubes x and v
     tdomain = Interval(t0, tf)
@@ -148,38 +169,25 @@ if __name__ == "__main__":
     v[5] &= traj_ang_vel[2]
 
     # inflate with uncertainties
-    for t in t_gps:
-        print("t:", t)
-        x[0].slice(t).inflate(err_gps_pos[t][0])
-        x[1].slice(t).inflate(err_gps_pos[t][1])
-        x[2].slice(t).inflate(err_gps_pos[t][2])
+    print(len(t_gps))
+    for idx,t in enumerate(t_gps):
+        if (idx%100==0):
+            print(idx)
+        x[0].slice(t).inflate(err_gps_pos[idx][0])
+        x[1].slice(t).inflate(err_gps_pos[idx][1])
+        x[2].slice(t).inflate(err_gps_pos[idx][2])
 
-        x[3].slice(t).inflate(err_orient[t][0])
-        x[4].slice(t).inflate(err_orient[t][1])
-        x[5].slice(t).inflate(err_orient[t][2])
+        x[3].slice(t).inflate(err_orient[idx][0])
+        x[4].slice(t).inflate(err_orient[idx][1])
+        x[5].slice(t).inflate(err_orient[idx][2])
 
-        v[0].slice(t).inflate(err_lin_acc[t][0])
-        v[1].slice(t).inflate(err_lin_acc[t][1])
-        v[2].slice(t).inflate(err_lin_acc[t][2])
+        v[0].slice(t).inflate(err_lin_acc[idx][0])
+        v[1].slice(t).inflate(err_lin_acc[idx][1])
+        v[2].slice(t).inflate(err_lin_acc[idx][2])
 
-        v[3].slice(t).inflate(err_ang_vel[t][0])
-        v[4].slice(t).inflate(err_ang_vel[t][1])
-        v[5].slice(t).inflate(err_ang_vel[t][2])
-
-
-    fig, axs = plt.subplots(2, 2)
-    axs[0, 0].plot(t_gps, heading, "r", label="heading")
-    axs[0, 0].plot(t_gps, imu_orient[:, 0], "b", label="roll")
-
-    axs[0, 1].plot(t_gps, heading, "r", label="heading")
-    axs[0, 1].plot(t_gps, imu_orient[:, 1], "g", label="pitch")
-
-    axs[1, 0].plot(t_gps, heading, "r", label="heading")
-    axs[1, 0].plot(t_gps, imu_orient[:, 2], "y", label="yaw")
-
-    plt.legend()
-    plt.show()
-    input()
+        v[3].slice(t).inflate(err_ang_vel[idx][0])
+        v[4].slice(t).inflate(err_ang_vel[idx][1])
+        v[5].slice(t).inflate(err_ang_vel[idx][2])
 
     # ADD CONTRACTOR NETWORK CONSTRAINTS
     cn = ContractorNetwork()
