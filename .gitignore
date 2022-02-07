@@ -6,3 +6,5 @@ gmon.out
 py/projection_surface/.mypy_cache
 py/*/.mypy_cache
 reference/
+src/robot_control_kat/build
+src/robot_control_kat/core
