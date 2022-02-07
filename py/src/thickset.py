@@ -7,9 +7,10 @@ from vibes import *
 from codac import *
 from pyibex.thickset import *
 import utm
+from pyproj import Proj
 
 
-# guerledan referential points
+# referential points from guerledan
 lonlat_refs = [
     [48.200100, -3.016789],
     [48.200193, -3.015264],
@@ -17,10 +18,13 @@ lonlat_refs = [
     [48.198763, -3.016315]
 ]
 
+pp = Proj(proj='utm', zone=30, ellps='WGS84', preserve_units=False)
+
 DATA_DIR = "../data/extracted/bag_2021-10-07-11-09-50"
 
 init_set = False
 x_init, y_init = 0,0
+
 
 # adapted from https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
 # qx, qy, qz, qw ->  phi (roll/bank), theta (pitch), psi (heading/yaw)
@@ -44,19 +48,6 @@ def quaternion_to_euler(quaternion):
 
     return roll, pitch, yaw
 
-
-def latlon_to_xy(latlon):
-    global init_set, x_init, y_init
-    lat, lon = latlon
-
-    x, y, _, _ = utm.from_latlon(lat, lon)
-
-    if not init_set:
-        init_set = True
-        x_init, y_init = x, y
-        return 0, 0
-
-    return x, y
 
 if __name__ == "__main__":
     ##### LOAD DATA
@@ -85,9 +76,14 @@ if __name__ == "__main__":
 
     # Load gnss
     gps = np.load(os.path.join(DATA_DIR, "gps.npz"))
+
     t_gps, gps_status = gps["gps_t"], gps["gps_status"]
+
     gps_pos, gps_pos_cov = gps["gps_pos"], gps["gps_pos_cov"]
-    gps_pos = np.concatenate((np.apply_along_axis(latlon_to_xy, 1, gps_pos[:,:2]), gps_pos[:,2]), axis=0)
+    xx, yy = pp(gps_pos[:,0], gps_pos[:,1])
+    gps_pos[:,0] = (xx - xx.min()) / (xx.max() - xx.min())
+    gps_pos[:,1] = (yy - yy.min()) / (yy.max() - yy.min())
+
     err_gps_pos = np.array([gps_pos_cov[:, 0], gps_pos_cov[:, 4], gps_pos_cov[:, 8]]).T
 
     # load magnetometer flag
@@ -132,14 +128,34 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(2, 2)
     axs[0, 0].plot(t_gps, heading, "r", label="heading")
     axs[0, 0].plot(t_gps, imu_orient[:, 0], "b", label="roll")
+    axs[0, 0].legend()
 
     axs[0, 1].plot(t_gps, heading, "r", label="heading")
     axs[0, 1].plot(t_gps, imu_orient[:, 1], "g", label="pitch")
+    axs[0, 1].legend()
 
     axs[1, 0].plot(t_gps, heading, "r", label="heading")
     axs[1, 0].plot(t_gps, imu_orient[:, 2], "y", label="yaw")
+    axs[1, 0].legend()
+    plt.suptitle("comparisson heading and imu data")
+    plt.show()
 
-    plt.legend()
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].plot(t_gps, err_gps_pos, label=["x", "y", "z"])
+    axs[0, 0].set_title("error gps")
+    axs[0, 0].legend()
+
+    axs[0, 1].plot(t_gps, err_orient, label=["roll", "pitch", "yaw"])
+    axs[0, 1].set_title("error orientation")
+    axs[0, 1].legend()
+
+    axs[1, 0].plot(t_gps, err_ang_vel, label=["x", "y", "z"])
+    axs[1, 0].set_title("error angular velocity")
+    axs[1, 0].legend()
+
+    axs[1, 1].plot(t_gps, err_lin_acc, label=["roll", "pitch", "yaw"])
+    axs[1, 1].set_title("error linear acceleration")
+    axs[1, 1].legend()
     plt.show()
 
     # create tubes x and v
@@ -215,6 +231,7 @@ if __name__ == "__main__":
     input("pause after vibes")
 
     # inflate with uncertainties
+    err_imu = 0.05
     for idx, t in enumerate(t_gps):
         if idx % 100 == 0:
             print(idx, "/", len(t_gps))
@@ -222,18 +239,28 @@ if __name__ == "__main__":
         x[1].slice(t).inflate(err_gps_pos[idx][1])
         x[2].slice(t).inflate(err_gps_pos[idx][2])
 
-        x[3].slice(t).inflate(err_orient[idx][0])
-        x[4].slice(t).inflate(err_orient[idx][1])
-        x[5].slice(t).inflate(err_orient[idx][2])
+        # with the plots above we can see that only gps has meaningful error
+#        x[3].slice(t).inflate(err_orient[idx][0])
+#        x[4].slice(t).inflate(err_orient[idx][1])
+#        x[5].slice(t).inflate(err_orient[idx][2])
+#
+#        v[0].slice(t).inflate(err_lin_acc[idx][0])
+#        v[1].slice(t).inflate(err_lin_acc[idx][1])
+#        v[2].slice(t).inflate(err_lin_acc[idx][2])
+#
+#        v[3].slice(t).inflate(err_ang_vel[idx][0])
+#        v[4].slice(t).inflate(err_ang_vel[idx][1])
+#        v[5].slice(t).inflate(err_ang_vel[idx][2])
 
-        v[0].slice(t).inflate(err_lin_acc[idx][0])
-        v[1].slice(t).inflate(err_lin_acc[idx][1])
-        v[2].slice(t).inflate(err_lin_acc[idx][2])
-
-        v[3].slice(t).inflate(err_ang_vel[idx][0])
-        v[4].slice(t).inflate(err_ang_vel[idx][1])
-        v[5].slice(t).inflate(err_ang_vel[idx][2])
-
+    x[3].inflate(err_imu)
+    x[4].inflate(err_imu)
+    x[5].inflate(err_imu)
+    v[0].inflate(err_imu)
+    v[1].inflate(err_imu)
+    v[2].inflate(err_imu)
+    v[3].inflate(err_imu)
+    v[4].inflate(err_imu)
+    v[5].inflate(err_imu)
 
     ##### ADD CONTRACTOR NETWORK CONSTRAINTS
 #    cn = ContractorNetwork()
