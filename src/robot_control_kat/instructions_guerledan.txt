@@ -1,0 +1,33 @@
+POUR FAIRE MARCHER replay_traj:
+
+Lancer vibes puis:
+cd explored_zone
+catkin_make --only-pkg-with-deps replay_traj
+source devel/setup.sh
+rosrun replay_traj replay_traj
+
+En parallèle:
+rosbag play bag_2021-09....bag
+
+POUR FAIRE MARCHER L'IHM:
+
+cd workspace_explored
+catkin_make
+(verifier que settigns.ini et map.qml sont dans workspace_explored)
+./devel/lib/robot_control_kat/robotcontrol
+
+POUR CONVERTIR ET AFFICHER LA ZONE EXPLOREE SANS INCERTITUDES
+
+- Le package /home/robot/ros/explored_zone/src/viz_intervals écrit dans un fichier (trapeze.txt) les points du trapeze et les coordonnées en longitude/latitude du robot à partir d'un rosbag. Plus précisément, il écrit les 5 points (4 points du trapèze avec l'origine en double) et longitude puis latitude du robot.
+Pour le lancer: 
+Lancer le rosbag en parallèle: rosbag play bag_2021-09....bag
+Puis:
+cd explored_zone
+catkin_make --only-pkg-with-deps viz_intervals
+source devel/setup.sh
+rosrun viz_intervals viz_intervals
+
+- Lancer convertisseur.py sans oublier de changer les noms des fichiers entrée/sortie et les x_init/y_init. Ce programme ressort un fichier (converti.txt) avec toutes les coordonnées en longitude puis latitude.
+
+C'est ce fichier qui est utilisé dans l'IHM (ne pas oublier de changer le nom du fichier converti dans l'ihm).
+
