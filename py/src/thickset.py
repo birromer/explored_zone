@@ -15,15 +15,15 @@ lonlat_refs = [
     [48.200100, -3.016789],
     [48.200193, -3.015264],
     [48.198639, -3.015064],
-    [48.198763, -3.016315]
+    [48.198763, -3.016315],
 ]
 
-pp = Proj(proj='utm', zone=30, ellps='WGS84', preserve_units=False)
+pp = Proj(proj="utm", zone=30, ellps="WGS84", preserve_units=False)
 
 DATA_DIR = "../data/extracted/bag_2021-10-07-11-09-50"
 
 init_set = False
-x_init, y_init = 0,0
+x_init, y_init = 0, 0
 
 
 # adapted from https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
@@ -49,7 +49,13 @@ def quaternion_to_euler(quaternion):
     return roll, pitch, yaw
 
 
+#def acc_to_global_frame(imu_lin_acc, angles):
+#    phi, theta, psi = angles
+
+
+
 if __name__ == "__main__":
+
     ##### LOAD DATA
     print("Reading data")
     # load heading
@@ -80,9 +86,9 @@ if __name__ == "__main__":
     t_gps, gps_status = gps["gps_t"], gps["gps_status"]
 
     gps_pos, gps_pos_cov = gps["gps_pos"], gps["gps_pos_cov"]
-    xx, yy = pp(gps_pos[:,0], gps_pos[:,1])
-    gps_pos[:,0] = (xx - xx.min()) / (xx.max() - xx.min())
-    gps_pos[:,1] = (yy - yy.min()) / (yy.max() - yy.min())
+    xx, yy = pp(gps_pos[:, 0], gps_pos[:, 1])
+    gps_pos[:, 0] = (xx - xx.min()) / (xx.max() - xx.min())
+    gps_pos[:, 1] = (yy - yy.min()) / (yy.max() - yy.min())
 
     err_gps_pos = np.array([gps_pos_cov[:, 0], gps_pos_cov[:, 4], gps_pos_cov[:, 8]]).T
 
@@ -149,11 +155,11 @@ if __name__ == "__main__":
     axs[0, 1].set_title("error orientation")
     axs[0, 1].legend()
 
-    axs[1, 0].plot(t_gps, err_ang_vel, label=["x", "y", "z"])
+    axs[1, 0].plot(t_gps, err_ang_vel, label=["roll", "pitch", "yaw"])
     axs[1, 0].set_title("error angular velocity")
     axs[1, 0].legend()
 
-    axs[1, 1].plot(t_gps, err_lin_acc, label=["roll", "pitch", "yaw"])
+    axs[1, 1].plot(t_gps, err_lin_acc, label=["x", "y", "z"])
     axs[1, 1].set_title("error linear acceleration")
     axs[1, 1].legend()
     plt.show()
@@ -218,18 +224,6 @@ if __name__ == "__main__":
     v[4] &= traj_ang_vel[1]
     v[5] &= traj_ang_vel[2]
 
-
-    beginDrawing()
-    fig_map = VIBesFigMap("Motorboat")
-    fig_map.set_properties(100, 100, 600, 300)
-#    fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(x, "x", 0, 1)
-    fig_map.axis_limits(-2.5,2.5,-0.1,0.1, True)
-    fig_map.show()
-    endDrawing()
-
-    input("pause after vibes")
-
     # inflate with uncertainties
     err_imu = 0.05
     for idx, t in enumerate(t_gps):
@@ -240,17 +234,17 @@ if __name__ == "__main__":
         x[2].slice(t).inflate(err_gps_pos[idx][2])
 
         # with the plots above we can see that only gps has meaningful error
-#        x[3].slice(t).inflate(err_orient[idx][0])
-#        x[4].slice(t).inflate(err_orient[idx][1])
-#        x[5].slice(t).inflate(err_orient[idx][2])
-#
-#        v[0].slice(t).inflate(err_lin_acc[idx][0])
-#        v[1].slice(t).inflate(err_lin_acc[idx][1])
-#        v[2].slice(t).inflate(err_lin_acc[idx][2])
-#
-#        v[3].slice(t).inflate(err_ang_vel[idx][0])
-#        v[4].slice(t).inflate(err_ang_vel[idx][1])
-#        v[5].slice(t).inflate(err_ang_vel[idx][2])
+    #        x[3].slice(t).inflate(err_orient[idx][0])
+    #        x[4].slice(t).inflate(err_orient[idx][1])
+    #        x[5].slice(t).inflate(err_orient[idx][2])
+    #
+    #        v[0].slice(t).inflate(err_lin_acc[idx][0])
+    #        v[1].slice(t).inflate(err_lin_acc[idx][1])
+    #        v[2].slice(t).inflate(err_lin_acc[idx][2])
+    #
+    #        v[3].slice(t).inflate(err_ang_vel[idx][0])
+    #        v[4].slice(t).inflate(err_ang_vel[idx][1])
+    #        v[5].slice(t).inflate(err_ang_vel[idx][2])
 
     x[3].inflate(err_imu)
     x[4].inflate(err_imu)
@@ -262,29 +256,53 @@ if __name__ == "__main__":
     v[4].inflate(err_imu)
     v[5].inflate(err_imu)
 
-    ##### ADD CONTRACTOR NETWORK CONSTRAINTS
-#    cn = ContractorNetwork()
-#
-#    # derivative constraint between x and v
-#    ctc_deriv = CtcDeriv()
-#    cn.add(ctc_deriv, [x, v])
-#
-#    # position constrains from gnss
-#    ctc_eval = CtcEval()  # yi = x(ti); xdot(.) = v(.)
-#    ctc_eval.enable_time_propag(False)
-#
-#    for i in range(len(t_gps)):
-#        # p = x[t_gps_i]
-#        # xdot(.) = v(.)
-#        p = IntervalVector([Interval(gps_pos[i, 0]), Interval(gps_pos[i, 1])])
-#        p.inflate(err_gps_pos)
-#
-#        cn.add(ctc_eval, [Interval(t_gps[i]), p[0], x[0], v[0]])
-#        cn.add(ctc_eval, [Interval(t_gps[i]), p[1], x[1], v[1]])
-#
-#    cn.contract(verbose=True)
+    beginDrawing()
+    fig_map = VIBesFigMap("Motorboat")
+    fig_map.set_properties(100, 100, 600, 300)
+    #    fig_map.smooth_tube_drawing(True)
+    fig_map.add_tube(x, "x", 0, 1)
+    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map.show()
+    endDrawing()
 
-##### COMPUTE EXPLORED ZONE OF THE MAP
+    input("pause after vibes")
+
+    ##### ADD CONTRACTOR NETWORK CONSTRAINTS
+    cn = ContractorNetwork()
+
+    # derivative constraint between x and v
+    ctc_deriv = CtcDeriv()
+    T = TubeVector(tdomain, dt, IntervalVector(3))  # first derivative x_1:3
+    cn.add(ctc_deriv, [x[:3], T])
+    cn.add(ctc_deriv, [T, v[:3]])
+
+    # position constrains from gnss
+    ctc_eval = CtcEval()  # yi = x(ti); xdot(.) = v(.)
+    ctc_eval.enable_time_propag(False)
+
+    for i in range(len(t_gps)):
+        p = IntervalVector([
+            Interval(gps_pos[i, 0]).inflate(err_gps_pos[i,0]),
+            Interval(gps_pos[i, 1]).inflate(err_gps_pos[i,1])
+        ])
+
+        cn.add(ctc_eval, [Interval(t_gps[i]), p[0], x[0], T[0]])
+        cn.add(ctc_eval, [Interval(t_gps[i]), p[1], x[1], T[1]])
+
+    cn.contract(verbose=True)
+
+    beginDrawing()
+    fig_map = VIBesFigMap("Contraction X")
+    fig_map.set_properties(100, 100, 600, 300)
+    #    fig_map.smooth_tube_drawing(True)
+    fig_map.add_tube(x, "x", 0, 1)
+    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map.show()
+    endDrawing()
+
+    input("second pause after vibes")
+
+    ##### COMPUTE EXPLORED ZONE OF THE MAP
     # thick function
     f_dist = Function("x1", "x2", "p1", "p2", "r", "(x1-p1)^2+(x2-p2)^2-r^2")
 
@@ -295,7 +313,7 @@ if __name__ == "__main__":
 
     S_dist = ThickSep_from_function(f_dist, p, y)
 
-    n = int((tf-t0)/dt) + 1
+    n = int((tf - t0) / dt) + 1
 
     for i in range(1, n):
         p = IntervalVector(3, Interval())
@@ -313,15 +331,15 @@ if __name__ == "__main__":
     fig_map.set_properties(100, 100, 600, 300)
     fig_map.smooth_tube_drawing(True)
     fig_map.add_tube(x, "x*", 0, 1)
-    fig_map.axis_limits(-2.5,2.5,-0.1,0.1, True)
+    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
     fig_map.show()
 
-#    vibes.beginDrawing()
-#    P = m.process_coverage()
-#    vibes.setFigureSize(m.m_map.max_diam(), m.m_map.max_diam())
-#    vibes.newFigure("Mapping Coverage")
-#    vibes.setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
-#    P.visit(ToVibes(figureName="Mapping Coverage", color_map=My_CMap))
-#    vibes.endDrawing()
+    #    vibes.beginDrawing()
+    #    P = m.process_coverage()
+    #    vibes.setFigureSize(m.m_map.max_diam(), m.m_map.max_diam())
+    #    vibes.newFigure("Mapping Coverage")
+    #    vibes.setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
+    #    P.visit(ToVibes(figureName="Mapping Coverage", color_map=My_CMap))
+    #    vibes.endDrawing()
 
     endDrawing()
