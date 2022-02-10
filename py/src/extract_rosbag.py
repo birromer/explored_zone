@@ -12,8 +12,8 @@ if __name__ == "__main__":
 
 ##### ROSBAG SETTINGS
     DATA_DIR = "../data/bags"
-#    bag_filename = 'bag_2021-10-07-11-09-50.bag'
-    bag_filename = 'bag_2021-10-07-11-09-50.bag'
+#   bag_filename = 'bag_2021-10-07-11-09-50.bag'
+    bag_filename = 'bag_2022-02-09-13-22-09.bag'
     extracted_dir = "../data/extracted/"+bag_filename[:-4]
 #    os.mkdir(extracted_dir)
 
