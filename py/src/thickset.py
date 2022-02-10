@@ -327,7 +327,7 @@ if __name__ == "__main__":
     #        cn.add(ctc_eval, [Interval(t_gps[i]), p[0], x[0], T[0]])
     #        cn.add(ctc_eval, [Interval(t_gps[i]), p[1], x[1], T[1]])
 
-#    cn.contract(verbose=True)
+    cn.contract(verbose=True)
 
     beginDrawing()
     fig_map = VIBesFigMap("Contraction X")
