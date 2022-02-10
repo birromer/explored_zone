@@ -1,6 +1,5 @@
 build/
 devel/
-data/extracted
 .catkin_workspace
 gmon.out
 py/projection_surface/.mypy_cache
