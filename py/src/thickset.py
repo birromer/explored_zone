@@ -11,12 +11,12 @@ from pyproj import Proj
 
 
 # referential points from guerledan
-lonlat_refs = [
-    [48.200100, -3.016789],
-    [48.200193, -3.015264],
-    [48.198639, -3.015064],
-    [48.198763, -3.016315],
-]
+#lonlat_refs = [
+#    [48.200100, -3.016789],
+#    [48.200193, -3.015264],
+#    [48.198639, -3.015064],
+#    [48.198763, -3.016315],
+#]
 
 pp = Proj(proj="utm", zone=30, ellps="WGS84", preserve_units=False)
 
