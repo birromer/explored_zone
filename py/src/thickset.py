@@ -285,6 +285,8 @@ if __name__ == "__main__":
     v[4] &= traj_ang_vel[1]
     v[5] &= traj_ang_vel[2]
 
+    print("Finished creating the tubes with the sensors data")
+
     beginDrawing()
     fig_map = VIBesFigMap("truth traj")
     fig_map.set_properties(100, 100, 600, 300)
