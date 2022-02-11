@@ -4,10 +4,38 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from vibes import *
-from codac import *
+from pyibex import *
 from pyibex.thickset import *
+from codac import *
 import utm
 from pyproj import Proj
+
+class ThickSep:
+    def __init__(self, Ssub, Ssup): self.Ssub, self.Ssup = Ssub, Ssup
+    def separate(self, X):
+       xin_sub, xout_sub = X.copy(), X.copy()
+       xin_sup, xout_sup = X.copy(), X.copy()
+       self.Ssub.separate(xin_sub, xout_sub)
+       self.Ssup.separate(xin_sup, xout_sup)
+       return (xin_sup, xin_sub | xout_sup, xout_sub)
+    def __and__(self, thickSep_y): return ThickSep(self.Ssub & thickSep_y.Ssub, self.Ssup & thickSep_y.Ssup)
+    def __invert__(self): return ThickSep(~self.Ssup, ~self.Ssub)
+    def __or__(self, thickSep_y): return ThickSep(self.Ssub | thickSep_y.Ssub, self.Ssup | thickSep_y.Ssup)
+
+def ThickSep_from_function(f, p, y):
+    S = SepFwdBwd(f, y)
+    Ssub = ~SepProj(~S, p)
+    Ssup = SepProj(S, p)
+    return ThickSep(Ssup, Ssub)
+
+def ThickTest_from_ThickSep(S):
+    def test(X):
+       Xin, Xu, Xout = S.separate(X)
+       if Xin.is_empty(): return IN
+       elif Xout.is_empty(): return OUT
+       elif Xu.is_empty(): return MAYBE
+       return UNK
+    return test
 
 
 # referential points from guerledan
@@ -50,40 +78,21 @@ def quaternion_to_euler(quaternion):
     return roll, pitch, yaw
 
 
-def acc_to_global_frame(imu_lin_acc, angles):
-    la_x, la_y, la_z = imu_lin_acc
+def acc_to_global_frame(lin_acc, angles):
+    la_x, la_y, la_z = lin_acc
+    yaw, pitch, roll = angles
 
-    Rx = np.array(
-        [
-            [1, 0, 0],
-            [0, cos(angles[0]), -sin(angles[0])],
-            [0, sin(angles[0]), cos(angles[0])],
-        ]
-    )
+    R = np.array([
+        [cos(yaw)*cos(pitch), cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll), cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll)],
+        [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
+        [        -sin(pitch),                             cos(pitch)*sin(roll),                             cos(pitch)*cos(roll)]
+    ])
 
-    Ry = np.array(
-        [
-            [cos(angles[1]), 0, sin(angles[1])],
-            [0, 1, 0],
-            [-sin(angles[1]), 0, cos(angles[1])],
-        ]
-    )
+    rob_lin_acc_x = R[0,0]*la_x + R[0,1]*la_y + R[0,2]*la_z
+    rob_lin_acc_y = R[1,0]*la_x + R[1,1]*la_y + R[1,2]*la_z
+    rob_lin_acc_z = R[2,0]*la_x + R[2,1]*la_y + R[2,2]*la_z
 
-    Rz = np.array(
-        [
-            [cos(angles[2]), -sin(angles[2]), 0],
-            [sin(angles[2]), cos(angles[2]), 0],
-            [0, 0, 1],
-        ]
-    )
-
-    R = Rz @ Ry @ Rx
-
-    rob_lin_acc_x = R[0,0]*imu_lin_acc[0] + R[0,1]*imu_lin_acc[1] + R[0,2]*imu_lin_acc[2]
-    rob_lin_acc_y = R[1,0]*imu_lin_acc[0] + R[1,1]*imu_lin_acc[1] + R[1,2]*imu_lin_acc[2]
-    rob_lin_acc_z = R[2,0]*imu_lin_acc[0] + R[2,1]*imu_lin_acc[1] + R[2,2]*imu_lin_acc[2]
-
-    return rob_lin_acc_x, rob_lin_acc_y, rob_lin_acc_z
+    return TubeVector([rob_lin_acc_x, rob_lin_acc_y, rob_lin_acc_z])
 
 
 if __name__ == "__main__":
@@ -103,13 +112,13 @@ if __name__ == "__main__":
     imu_lin_acc, imu_lin_acc_cov = imu["imu_lin_acc"], imu["imu_lin_acc_cov"]
 
     err_orient = np.array(
-        [imu_orient_cov[:, 0], imu_orient_cov[:, 4], imu_orient_cov[:, 8]]
+        [3*np.sqrt(imu_orient_cov[:, 0]), 3*np.sqrt(imu_orient_cov[:, 4]), 3*np.sqrt(imu_orient_cov[:, 8])]
     ).T
     err_ang_vel = np.array(
-        [imu_ang_vel_cov[:, 0], imu_ang_vel_cov[:, 4], imu_ang_vel_cov[:, 8]]
+        [3*np.sqrt(imu_ang_vel_cov[:, 0]), 3*np.sqrt(imu_ang_vel_cov[:, 4]), 3*np.sqrt(imu_ang_vel_cov[:, 8])]
     ).T
     err_lin_acc = np.array(
-        [imu_lin_acc_cov[:, 0], imu_lin_acc_cov[:, 4], imu_lin_acc_cov[:, 8]]
+        [3*np.sqrt(imu_lin_acc_cov[:, 0]), 3*np.sqrt(imu_lin_acc_cov[:, 4]), 3*np.sqrt(imu_lin_acc_cov[:, 8])]
     ).T
 
     # Load gnss
@@ -122,7 +131,7 @@ if __name__ == "__main__":
     gps_pos[:, 0] = (xx - xx.min()) / (xx.max() - xx.min())
     gps_pos[:, 1] = (yy - yy.min()) / (yy.max() - yy.min())
 
-    err_gps_pos = np.array([gps_pos_cov[:, 0], gps_pos_cov[:, 4], gps_pos_cov[:, 8]]).T
+    err_gps_pos = np.array([3*np.sqrt(gps_pos_cov[:, 0]), 3*np.sqrt(gps_pos_cov[:, 4]), 3*np.sqrt(gps_pos_cov[:, 8])]).T
 
     # load magnetometer flag
     mag = np.load(os.path.join(DATA_DIR, "mag_flag.npz"))
@@ -160,6 +169,7 @@ if __name__ == "__main__":
 
     # will be using the gps as reference, but very close to imu
     t0, tf, dt = t_gps[0], t_gps[-1], t_gps[1] - t_gps[0]
+#    t0, tf, dt = t_gps[0], t_gps[20000], t_gps[1] - t_gps[0]
     print("T0={}, Tf={}, dt={}".format(t0, tf, dt))
 
     # TODO: find why of the difference
@@ -201,7 +211,6 @@ if __name__ == "__main__":
     x = TubeVector(tdomain, dt, IntervalVector(6))  # position, orientation
     v = TubeVector(tdomain, dt, IntervalVector(6))  # linear acceleration, angular velocity
     u = TubeVector(tdomain, dt, IntervalVector(2))  # inputs given to the boat
-    m = TubeVector(tdomain, dt, IntervalVector(2))  # explored zone
 
     ##### ADD DATA TO TUBES
     # create trajectories with correct tdomain
@@ -265,18 +274,20 @@ if __name__ == "__main__":
     fig_map.show()
     endDrawing()
 
-    input("pause after first vibes")
-
     plt.figure()
 
     # inflate with uncertainties
-    err_imu = 0.05
-    for idx, t in enumerate(t_gps):
-        if idx % 100 == 0:
-            print(idx, "/", len(t_gps))
-        x[0].slice(t).inflate(err_gps_pos[idx][0]/100)
-        x[1].slice(t).inflate(err_gps_pos[idx][1]/100)
-        x[2].slice(t).inflate(err_gps_pos[idx][2]/100)
+    err_imu = 0.005
+#    for idx, t in enumerate(t_gps):
+#        if idx % 100 == 0:
+#            print(idx, "/", len(t_gps))
+#        x[0].slice(t).inflate(err_gps_pos[idx][0]/100)
+#        x[1].slice(t).inflate(err_gps_pos[idx][1]/100)
+#        x[2].slice(t).inflate(err_gps_pos[idx][2]/100)
+
+    x[0].inflate(0.01)
+    x[1].inflate(0.01)
+    x[2].inflate(0.01)
 
     x[3].inflate(err_imu)
     x[4].inflate(err_imu)
@@ -306,34 +317,21 @@ if __name__ == "__main__":
     ctc_deriv = CtcDeriv()
 
     T = TubeVector(tdomain, dt, IntervalVector(3))  # first derivative x_1:3
+    T.set(IntervalVector(3, Interval(0)), tdomain.lb())
+
+    C = TubeVector(x[:3])  # gps position x_1:3
+#    C = x[:3]
+
     global_acc = acc_to_global_frame(v[:3], x[3:])
-    print(global_acc)
 
-    cn.add(ctc_deriv, [T, global_acc])  # acc -> /integ/ -> vel
-    cn.add(ctc_deriv, [x[:3], T])       # vel -> /integ/ -> pos
-
-    # position constrains from gnss
-    #    ctc_eval = CtcEval()  # yi = x(ti); xdot(.) = v(.)
-    #    ctc_eval.enable_time_propag(False)
-
-    #    for i in range(len(t_gps)):
-    #        p = IntervalVector(
-    #            [
-    #                Interval(gps_pos[i, 0]).inflate(err_gps_pos[i, 0]),
-    #                Interval(gps_pos[i, 1]).inflate(err_gps_pos[i, 1]),
-    #            ]
-    #        )
-    #
-    #        cn.add(ctc_eval, [Interval(t_gps[i]), p[0], x[0], T[0]])
-    #        cn.add(ctc_eval, [Interval(t_gps[i]), p[1], x[1], T[1]])
-
-    cn.contract(verbose=True)
+    ctc_deriv.contract(T, global_acc)  # acc -> /integ/ -> vel
+    ctc_deriv.contract(C, T)           # vel -> /integ/ -> pos
 
     beginDrawing()
     fig_map = VIBesFigMap("Contraction X")
     fig_map.set_properties(100, 100, 600, 300)
     fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(x, "x", 0, 1)
+    fig_map.add_tube(C, "C", 0, 1)
     fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
     fig_map.show()
     endDrawing()
@@ -342,42 +340,36 @@ if __name__ == "__main__":
 
     ##### COMPUTE EXPLORED ZONE OF THE MAP
     # thick function
+    y = Interval(-oo, 0)
     f_dist = Function("x1", "x2", "p1", "p2", "r", "(x1-p1)^2+(x2-p2)^2-r^2")
 
+    m = IntervalVector(2, Interval(-50,50))  # explored zone
+
     p = IntervalVector(3, Interval())
-    p[0] = m[0](0)
-    p[1] = m[1](0)
-    p[2] = Interval(10)
+    p[0] = C[0](0)
+    p[1] = C[1](0)
+    p[2] = Interval(1)  # measurement range
 
     S_dist = ThickSep_from_function(f_dist, p, y)
 
     n = int((tf - t0) / dt) + 1
 
     for i in range(1, n):
+        print(i, "/", n)
         p = IntervalVector(3, Interval())
-        p[0] = m[0](i)
-        p[1] = m[1](i)
-        p[2] = Interval(10)
+        p[0] = C[0](i)
+        p[1] = C[1](i)
+        p[2] = Interval(1)
         S_dist = S_dist | ThickSep_from_function(f_dist, p, y)
 
-    paving = ThickPaving(self.m_map, ThickTest_from_ThickSep(S_dist), 0.1)
+    paving = ThickPaving(m, ThickTest_from_ThickSep(S_dist), 1.0, display=True)
 
     print(paving)
 
-    beginDrawing()
-    fig_map = VIBesFigMap("Saturne")
-    fig_map.set_properties(100, 100, 600, 300)
-    fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(x, "x*", 0, 1)
-    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
-    fig_map.show()
-
-    #    vibes.beginDrawing()
-    #    P = m.process_coverage()
-    #    vibes.setFigureSize(m.m_map.max_diam(), m.m_map.max_diam())
-    #    vibes.newFigure("Mapping Coverage")
-    #    vibes.setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
-    #    P.visit(ToVibes(figureName="Mapping Coverage", color_map=My_CMap))
-    #    vibes.endDrawing()
-
-    endDrawing()
+#    vibes.beginDrawing()
+#    vibes.setFigureSize(m.max_diam(), m.max_diam())
+#    vibes.newFigure("Mapping Coverage")
+#    vibes.setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
+#    paving.visit(ToVibes(figureName="Mapping Coverage", color_map=My_CMap))
+#    vibes.endDrawing()
+#    endDrawing()
