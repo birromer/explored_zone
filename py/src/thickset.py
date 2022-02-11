@@ -9,6 +9,7 @@ from pyibex.thickset import *
 from codac import *
 import utm
 from pyproj import Proj
+import time
 
 class ThickSep:
     def __init__(self, Ssub, Ssup): self.Ssub, self.Ssup = Ssub, Ssup
@@ -90,14 +91,13 @@ def acc_to_global_frame(lin_acc, angles):
 
     rob_lin_acc_x = R[0,0]*la_x + R[0,1]*la_y + R[0,2]*la_z
     rob_lin_acc_y = R[1,0]*la_x + R[1,1]*la_y + R[1,2]*la_z
-    rob_lin_acc_z = R[2,0]*la_x + R[2,1]*la_y + R[2,2]*la_z
 
-    return TubeVector([rob_lin_acc_x, rob_lin_acc_y, rob_lin_acc_z])
+    return TubeVector([rob_lin_acc_x, rob_lin_acc_y])
 
 
 if __name__ == "__main__":
 
-    ##### LOAD DATA
+##### LOAD DATA
     print("Reading data")
     # load heading
     hd = np.load(os.path.join(DATA_DIR, "heading.npz"))
@@ -127,11 +127,12 @@ if __name__ == "__main__":
     t_gps, gps_status = gps["gps_t"], gps["gps_status"]
 
     gps_pos, gps_pos_cov = gps["gps_pos"], gps["gps_pos_cov"]
-    xx, yy = pp(gps_pos[:, 0], gps_pos[:, 1])
-    gps_pos[:, 0] = (xx - xx.min()) / (xx.max() - xx.min())
-    gps_pos[:, 1] = (yy - yy.min()) / (yy.max() - yy.min())
 
     err_gps_pos = np.array([3*np.sqrt(gps_pos_cov[:, 0]), 3*np.sqrt(gps_pos_cov[:, 4]), 3*np.sqrt(gps_pos_cov[:, 8])]).T
+
+    xx, yy = pp(gps_pos[:, 0], gps_pos[:, 1])
+    gps_pos[:, 0] = xx - xx[0]
+    gps_pos[:, 1] = yy - yy[0]
 
     # load magnetometer flag
     mag = np.load(os.path.join(DATA_DIR, "mag_flag.npz"))
@@ -157,7 +158,7 @@ if __name__ == "__main__":
     print("Error angular velocity ->", err_ang_vel.shape)
     print("Error linear acceleration ->", err_lin_acc.shape)
 
-    ##### CREATE TUBES
+##### CREATE TUBES
     # fix absolute time to starting in 0 sec
     t_gps[:, 0] = t_gps[:, 0] - t_gps[0, 0]
     t_gps[:, 1] = t_gps[:, 1] / 10**9
@@ -168,8 +169,8 @@ if __name__ == "__main__":
     #    t_imu = t_imu[:,0] + t_imu[:,1]
 
     # will be using the gps as reference, but very close to imu
-    t0, tf, dt = t_gps[0], t_gps[-1], t_gps[1] - t_gps[0]
-#    t0, tf, dt = t_gps[0], t_gps[20000], t_gps[1] - t_gps[0]
+#    t0, tf, dt = t_gps[0], t_gps[-1], t_gps[1] - t_gps[0]
+    t0, tf, dt = t_gps[0], t_gps[5000], t_gps[1] - t_gps[0]
     print("T0={}, Tf={}, dt={}".format(t0, tf, dt))
 
     # TODO: find why of the difference
@@ -206,13 +207,27 @@ if __name__ == "__main__":
     axs[1, 1].legend()
     plt.show()
 
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].plot(t_gps, imu_orient, label=["roll", "pitch", "yaw"])
+    axs[0, 0].set_title("orientation")
+    axs[0, 0].legend()
+
+    axs[0, 1].plot(t_gps, imu_ang_vel, label=["roll", "pitch", "yaw"])
+    axs[0, 1].set_title("angular velocity")
+    axs[0, 1].legend()
+
+    axs[1, 0].plot(t_gps, imu_lin_acc, label=["x", "y", "z"])
+    axs[1, 0].set_title("linear acceleration")
+    axs[1, 0].legend()
+    plt.show()
+
     # create tubes x and v
     tdomain = Interval(t0, tf)
-    x = TubeVector(tdomain, dt, IntervalVector(6))  # position, orientation
-    v = TubeVector(tdomain, dt, IntervalVector(6))  # linear acceleration, angular velocity
+    x = TubeVector(tdomain, dt, IntervalVector(6))  # x, y, z, phi, theta, psi
+    v = TubeVector(tdomain, dt, IntervalVector(6))  # dd_x, dd_y, dd_z, d_phi, d_theta, d_psi
     u = TubeVector(tdomain, dt, IntervalVector(2))  # inputs given to the boat
 
-    ##### ADD DATA TO TUBES
+##### ADD DATA TO TUBES
     # create trajectories with correct tdomain
     traj_gps = TrajectoryVector(
         [
@@ -254,6 +269,7 @@ if __name__ == "__main__":
     x[0] &= traj_gps[0]
     x[1] &= traj_gps[1]
     x[2] &= traj_gps[2]
+
     x[3] &= traj_orient[0]
     x[4] &= traj_orient[1]
     x[5] &= traj_orient[2]
@@ -261,6 +277,7 @@ if __name__ == "__main__":
     v[0] &= traj_lin_acc[0]
     v[1] &= traj_lin_acc[1]
     v[2] &= traj_lin_acc[2]
+
     v[3] &= traj_ang_vel[0]
     v[4] &= traj_ang_vel[1]
     v[5] &= traj_ang_vel[2]
@@ -276,22 +293,24 @@ if __name__ == "__main__":
 
     plt.figure()
 
-    # inflate with uncertainties
-    err_imu = 0.005
-#    for idx, t in enumerate(t_gps):
-#        if idx % 100 == 0:
-#            print(idx, "/", len(t_gps))
-#        x[0].slice(t).inflate(err_gps_pos[idx][0]/100)
-#        x[1].slice(t).inflate(err_gps_pos[idx][1]/100)
-#        x[2].slice(t).inflate(err_gps_pos[idx][2]/100)
+    n = int((tf - t0) / dt) + 1
 
-    x[0].inflate(0.01)
-    x[1].inflate(0.01)
-    x[2].inflate(0.01)
+    # inflate with uncertainties
+    err_imu = 0.01
+    for i in range(1, n):
+        print(i, "/", n)
+        x[0](i).inflate(err_gps_pos[i][0])
+        x[1](i).inflate(err_gps_pos[i][1])
+        x[2](i).inflate(err_gps_pos[i][2])
+
+#    x[0].inflate(0.01)
+#    x[1].inflate(0.01)
+#    x[2].inflate(err_imu)
 
     x[3].inflate(err_imu)
     x[4].inflate(err_imu)
     x[5].inflate(err_imu)
+
     v[0].inflate(err_imu)
     v[1].inflate(err_imu)
     v[2].inflate(err_imu)
@@ -300,71 +319,87 @@ if __name__ == "__main__":
     v[5].inflate(err_imu)
 
     beginDrawing()
-    fig_map = VIBesFigMap("Motorboat")
+    fig_map = VIBesFigMap("Inflated position")
     fig_map.set_properties(100, 100, 600, 300)
     fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(x, "x", 0, 1)
+    fig_map.add_tube(x, "X", 0, 1)
     fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
     fig_map.show()
     endDrawing()
 
-    input("pause after inflation")
-
-    ##### ADD CONTRACTOR NETWORK CONSTRAINTS
-    cn = ContractorNetwork()
-
+##### ADD CONTRACTOR NETWORK CONSTRAINTS
     # derivative constraint between x and v
     ctc_deriv = CtcDeriv()
 
-    T = TubeVector(tdomain, dt, IntervalVector(3))  # first derivative x_1:3
-    T.set(IntervalVector(3, Interval(0)), tdomain.lb())
+    T = TubeVector(tdomain, dt, IntervalVector(2))  # first derivative x_1:3
+    T.set(IntervalVector(2, Interval(0)), tdomain.lb())
 
-    C = TubeVector(x[:3])  # gps position x_1:3
-#    C = x[:3]
+    C = TubeVector(x[:2])  # gps position x_1:2
 
-    global_acc = acc_to_global_frame(v[:3], x[3:])
+
+    beginDrawing()
+    fig_map = VIBesFigMap("before cont")
+    fig_map.set_properties(100, 100, 600, 300)
+    fig_map.smooth_tube_drawing(True)
+    fig_map.add_tube(C, "X", 0, 1)
+    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map.show()
+    endDrawing()
+
+    global_acc = acc_to_global_frame(v[:3], x[3:])  # sending lin acc and orient
 
     ctc_deriv.contract(T, global_acc)  # acc -> /integ/ -> vel
     ctc_deriv.contract(C, T)           # vel -> /integ/ -> pos
 
+    print("C",C)
+
     beginDrawing()
-    fig_map = VIBesFigMap("Contraction X")
+    fig_map = VIBesFigMap("T")
     fig_map.set_properties(100, 100, 600, 300)
     fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(C, "C", 0, 1)
+    fig_map.add_tube(T, "T", 0, 1)
+    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map.show()
+    endDrawing()
+
+    beginDrawing()
+    fig_map = VIBesFigMap("Contracted position")
+    fig_map.set_properties(100, 100, 600, 300)
+    fig_map.smooth_tube_drawing(True)
+    fig_map.add_tube(C, "X", 0, 1)
     fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
     fig_map.show()
     endDrawing()
 
     input("pause after contraction")
 
-    ##### COMPUTE EXPLORED ZONE OF THE MAP
+##### COMPUTE EXPLORED ZONE OF THE MAP
     # thick function
+    tinit = time.time()
+    detection_range = 1
     y = Interval(-oo, 0)
-    f_dist = Function("x1", "x2", "p1", "p2", "r", "(x1-p1)^2+(x2-p2)^2-r^2")
+    f_dist = Function("x1", "x2", "p1", "p2", "p3", "(x1-p1)^2+(x2-p2)^2-p3^2")
 
-    m = IntervalVector(2, Interval(-50,50))  # explored zone
+    m = IntervalVector(2, Interval(-250,250))  # explored zone
 
     p = IntervalVector(3, Interval())
     p[0] = C[0](0)
     p[1] = C[1](0)
-    p[2] = Interval(1)  # measurement range
+    p[2] = Interval(detection_range)  # measurement range
 
     S_dist = ThickSep_from_function(f_dist, p, y)
-
-    n = int((tf - t0) / dt) + 1
 
     for i in range(1, n):
         print(i, "/", n)
         p = IntervalVector(3, Interval())
         p[0] = C[0](i)
         p[1] = C[1](i)
-        p[2] = Interval(1)
+        p[2] = Interval(detection_range)
         S_dist = S_dist | ThickSep_from_function(f_dist, p, y)
 
-    paving = ThickPaving(m, ThickTest_from_ThickSep(S_dist), 1.0, display=True)
+    paving = ThickPaving(m, ThickTest_from_ThickSep(S_dist), 0.25, display=True)
 
-    print(paving)
+    print("Took", time.time() - tinit, "seconds for thick paving")
 
 #    vibes.beginDrawing()
 #    vibes.setFigureSize(m.max_diam(), m.max_diam())
