@@ -16,8 +16,12 @@ class ThickSep:
     def separate(self, X):
        xin_sub, xout_sub = X.copy(), X.copy()
        xin_sup, xout_sup = X.copy(), X.copy()
+       print("X in", X)
+       print("indo pro primeiro separate")
        self.Ssub.separate(xin_sub, xout_sub)
+       print("indo pro segundo separate")
        self.Ssup.separate(xin_sup, xout_sup)
+       print("saiu do segundo separate")
        return (xin_sup, xin_sub | xout_sup, xout_sub)
     def __and__(self, thickSep_y): return ThickSep(self.Ssub & thickSep_y.Ssub, self.Ssup & thickSep_y.Ssup)
     def __invert__(self): return ThickSep(~self.Ssup, ~self.Ssub)
@@ -25,8 +29,11 @@ class ThickSep:
 
 def ThickSep_from_function(f, p, y):
     S = SepFwdBwd(f, y)
+    print("going for the first")
     Ssub = ~SepProj(~S, p)
+    print("going for the second")
     Ssup = SepProj(S, p)
+    print("left second")
     return ThickSep(Ssup, Ssub)
 
 def ThickTest_from_ThickSep(S):
@@ -304,10 +311,14 @@ if __name__ == "__main__":
     err_imu = 0.01
     for i,t in enumerate(t_gps[:5000]):
         print(i, "/", n)
-        x[0].slice(t).inflate(0.1)#err_gps_pos[i][0])
-        x[1].slice(t).inflate(0.1)#err_gps_pos[i][1])
-        x[2].slice(t).inflate(0.1)#err_gps_pos[i][2])
+        x[0].slice(t).inflate(0.05)#err_gps_pos[i][0])
+        x[1].slice(t).inflate(0.05)#err_gps_pos[i][1])
+        x[2].slice(t).inflate(0.05)#err_gps_pos[i][2])
         print("ex {}, ey {}".format(err_gps_pos[i][0], err_gps_pos[i][1]))
+#        x[0](i).inflate(err_gps_pos[i][0])
+#        x[1](i).inflate(err_gps_pos[i][1])
+#        x[2](i).inflate(err_gps_pos[i][2])
+
 
     x[3].inflate(err_imu)
     x[4].inflate(err_imu)
@@ -320,7 +331,7 @@ if __name__ == "__main__":
     v[4].inflate(err_imu)
     v[5].inflate(err_imu)
 
-    print("Finished inserting incertitude in the tubes")
+    print("Finished inserting uncertainty in the tubes")
 
     beginDrawing()
     fig_map_inflated = VIBesFigMap("Inflated position")
@@ -371,7 +382,7 @@ if __name__ == "__main__":
     tinit = time.time()
     detection_range = 1
     y = Interval(-oo, 0)
-    f_dist = Function("x1", "x2", "p1", "p2", "p3", "(x1-p1)^2+(x2-p2)^2-p3^2")
+    f_dist = Function("x1", "x2", "p1", "p2", "r", "(x1-p1)^2+(x2-p2)^2-r^2")
 
     m = IntervalVector(2, Interval(-250,250))  # explored zone
 
