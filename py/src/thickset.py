@@ -47,6 +47,8 @@ def ThickTest_from_ThickSep(S):
 #    [48.198763, -3.016315],
 #]
 
+n_std_dev = 2
+
 pp = Proj(proj="utm", zone=30, ellps="WGS84", preserve_units=False)
 
 #DATA_DIR = "../data/extracted/bag_2021-10-07-11-09-50"
@@ -112,13 +114,13 @@ if __name__ == "__main__":
     imu_lin_acc, imu_lin_acc_cov = imu["imu_lin_acc"], imu["imu_lin_acc_cov"]
 
     err_orient = np.array(
-        [3*np.sqrt(imu_orient_cov[:, 0]), 3*np.sqrt(imu_orient_cov[:, 4]), 3*np.sqrt(imu_orient_cov[:, 8])]
+        [n_std_dev*np.sqrt(imu_orient_cov[:, 0]), n_std_dev*np.sqrt(imu_orient_cov[:, 4]), n_std_dev*np.sqrt(imu_orient_cov[:, 8])]
     ).T
     err_ang_vel = np.array(
-        [3*np.sqrt(imu_ang_vel_cov[:, 0]), 3*np.sqrt(imu_ang_vel_cov[:, 4]), 3*np.sqrt(imu_ang_vel_cov[:, 8])]
+        [n_std_dev*np.sqrt(imu_ang_vel_cov[:, 0]), n_std_dev*np.sqrt(imu_ang_vel_cov[:, 4]), n_std_dev*np.sqrt(imu_ang_vel_cov[:, 8])]
     ).T
     err_lin_acc = np.array(
-        [3*np.sqrt(imu_lin_acc_cov[:, 0]), 3*np.sqrt(imu_lin_acc_cov[:, 4]), 3*np.sqrt(imu_lin_acc_cov[:, 8])]
+        [n_std_dev*np.sqrt(imu_lin_acc_cov[:, 0]), n_std_dev*np.sqrt(imu_lin_acc_cov[:, 4]), n_std_dev*np.sqrt(imu_lin_acc_cov[:, 8])]
     ).T
 
     # Load gnss
@@ -128,8 +130,9 @@ if __name__ == "__main__":
 
     gps_pos, gps_pos_cov = gps["gps_pos"], gps["gps_pos_cov"]
 
-    err_gps_pos = np.array([3*np.sqrt(gps_pos_cov[:, 0]), 3*np.sqrt(gps_pos_cov[:, 4]), 3*np.sqrt(gps_pos_cov[:, 8])]).T
+    err_gps_pos = np.array([n_std_dev*np.sqrt(gps_pos_cov[:, 0]), n_std_dev*np.sqrt(gps_pos_cov[:, 4]), n_std_dev*np.sqrt(gps_pos_cov[:, 8])]).T
 
+    # convert to meters and center on the first measurement
     xx, yy = pp(gps_pos[:, 0], gps_pos[:, 1])
     gps_pos[:, 0] = xx - xx[0]
     gps_pos[:, 1] = yy - yy[0]
@@ -297,15 +300,12 @@ if __name__ == "__main__":
 
     # inflate with uncertainties
     err_imu = 0.01
-    for i in range(1, n):
+    for i,t in enumerate(t_gps[:5000]):
         print(i, "/", n)
-        x[0](i).inflate(err_gps_pos[i][0])
-        x[1](i).inflate(err_gps_pos[i][1])
-        x[2](i).inflate(err_gps_pos[i][2])
-
-#    x[0].inflate(0.01)
-#    x[1].inflate(0.01)
-#    x[2].inflate(err_imu)
+        x[0].slice(t).inflate(0.1)#err_gps_pos[i][0])
+        x[1].slice(t).inflate(0.1)#err_gps_pos[i][1])
+        x[2].slice(t).inflate(0.1)#err_gps_pos[i][2])
+        print("ex {}, ey {}".format(err_gps_pos[i][0], err_gps_pos[i][1]))
 
     x[3].inflate(err_imu)
     x[4].inflate(err_imu)
@@ -318,13 +318,15 @@ if __name__ == "__main__":
     v[4].inflate(err_imu)
     v[5].inflate(err_imu)
 
+    print("Finished inserting incertitude in the tubes")
+
     beginDrawing()
-    fig_map = VIBesFigMap("Inflated position")
-    fig_map.set_properties(100, 100, 600, 300)
-    fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(x, "X", 0, 1)
-    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
-    fig_map.show()
+    fig_map_inflated = VIBesFigMap("Inflated position")
+    fig_map_inflated.set_properties(100, 100, 600, 300)
+    fig_map_inflated.smooth_tube_drawing(True)
+    fig_map_inflated.add_tube(x, "X", 0, 1)
+    fig_map_inflated.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map_inflated.show()
     endDrawing()
 
 ##### ADD CONTRACTOR NETWORK CONSTRAINTS
@@ -336,16 +338,6 @@ if __name__ == "__main__":
 
     C = TubeVector(x[:2])  # gps position x_1:2
 
-
-    beginDrawing()
-    fig_map = VIBesFigMap("before cont")
-    fig_map.set_properties(100, 100, 600, 300)
-    fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(C, "X", 0, 1)
-    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
-    fig_map.show()
-    endDrawing()
-
     global_acc = acc_to_global_frame(v[:3], x[3:])  # sending lin acc and orient
 
     ctc_deriv.contract(T, global_acc)  # acc -> /integ/ -> vel
@@ -354,11 +346,9 @@ if __name__ == "__main__":
     print("C",C)
 
     beginDrawing()
-    fig_map = VIBesFigMap("T")
+    fig_map = VIBesFigTubeVector("T")
     fig_map.set_properties(100, 100, 600, 300)
-    fig_map.smooth_tube_drawing(True)
-    fig_map.add_tube(T, "T", 0, 1)
-    fig_map.axis_limits(-2.5, 2.5, -0.1, 0.1, True)
+    fig_map.add_tube(T, "T")
     fig_map.show()
     endDrawing()
 
@@ -372,6 +362,7 @@ if __name__ == "__main__":
     endDrawing()
 
     input("pause after contraction")
+    print("Finished contracting tubes from constraints")
 
 ##### COMPUTE EXPLORED ZONE OF THE MAP
     # thick function
@@ -399,12 +390,13 @@ if __name__ == "__main__":
 
     paving = ThickPaving(m, ThickTest_from_ThickSep(S_dist), 0.25, display=True)
 
+    print("Finished performed the thick paving")
     print("Took", time.time() - tinit, "seconds for thick paving")
 
-#    vibes.beginDrawing()
-#    vibes.setFigureSize(m.max_diam(), m.max_diam())
-#    vibes.newFigure("Mapping Coverage")
-#    vibes.setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
-#    paving.visit(ToVibes(figureName="Mapping Coverage", color_map=My_CMap))
-#    vibes.endDrawing()
-#    endDrawing()
+    beginDrawing()
+    setFigureSize(m.max_diam(), m.max_diam())
+    newFigure("Explored zone")
+    setFigureProperties({"x": 700, "y": 430, "width": 600, "height": 600})
+    paving.visit(ToVibes(figureName="Explored zone"))
+    endDrawing()
+    endDrawing()
